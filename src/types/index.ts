@@ -39,3 +39,9 @@ export interface ClickBySource {
   source: string;
   total: number;
 }
+
+export interface FunnelAnalytics {
+  source: string;
+  views: number;
+  clicks: number;
+}

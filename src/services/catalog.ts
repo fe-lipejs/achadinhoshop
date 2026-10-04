@@ -19,24 +19,37 @@ export async function fetchPublicCatalog(): Promise<{ products: Product[]; categ
 }
 
 export function registerClick(productId: string, source: string): void {
-  // fire-and-forget com keepalive: a requisição continua mesmo quando a página
-  // navega para a Shopee / Mercado Livre, sem atrasar o redirecionamento.
   const url = import.meta.env.VITE_SUPABASE_URL as string;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
   try {
-    void fetch(`${url}/rest/v1/rpc/register_click`, {
+    void fetch(url + '/rest/v1/rpc/register_click', {
       method: 'POST',
       keepalive: true,
       headers: {
         'Content-Type': 'application/json',
         apikey: key,
-        Authorization: `Bearer ${key}`,
+        Authorization: 'Bearer ' + key,
       },
       body: JSON.stringify({ p_product_id: productId, p_source: source }),
     }).catch(() => undefined);
-  } catch {
-    // nunca bloquear a compra por causa da métrica
-  }
+  } catch {}
+}
+
+export function registerPageView(source: string): void {
+  const url = import.meta.env.VITE_SUPABASE_URL as string;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+  try {
+    void fetch(url + '/rest/v1/rpc/register_page_view', {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: key,
+        Authorization: 'Bearer ' + key,
+      },
+      body: JSON.stringify({ p_source: source }),
+    }).catch(() => undefined);
+  } catch {}
 }
 
 // ---------------------------------------------------------------- Admin: produtos
@@ -128,3 +141,36 @@ export async function deleteImage(publicUrl: string): Promise<void> {
   const path = publicUrl.slice(index + marker.length);
   await supabase.storage.from(STORAGE_BUCKET).remove([path]);
 }
+
+
+
+export async function fetchFunnelAnalytics(days = 30): Promise<import('../types').FunnelAnalytics[]> {
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  
+  const [viewsRes, clicksRes] = await Promise.all([
+    supabase.from('page_views').select('source').gte('created_at', since).limit(10000),
+    supabase.from('product_clicks').select('source').gte('created_at', since).limit(10000)
+  ]);
+  
+  if (viewsRes.error) throw viewsRes.error;
+  if (clicksRes.error) throw clicksRes.error;
+  
+  const map = new Map<string, { views: number; clicks: number }>();
+  
+  ;(viewsRes.data as { source: string | null }[]).forEach(row => {
+    const key = row.source || 'direto';
+    if (!map.has(key)) map.set(key, { views: 0, clicks: 0 });
+    map.get(key)!.views++;
+  });
+  
+  ;(clicksRes.data as { source: string | null }[]).forEach(row => {
+    const key = row.source || 'direto';
+    if (!map.has(key)) map.set(key, { views: 0, clicks: 0 });
+    map.get(key)!.clicks++;
+  });
+  
+  return [...map.entries()]
+    .map(([source, stats]) => ({ source, views: stats.views, clicks: stats.clicks }))
+    .sort((a, b) => b.views - a.views);
+}
+

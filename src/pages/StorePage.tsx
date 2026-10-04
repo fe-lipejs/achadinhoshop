@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Menu, PackageSearch, Search, ShoppingBag, X, ShieldCheck, User } from 'lucide-react';
+import { Menu, PackageSearch, Search, X, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import type { Category, Product, Store } from '../types';
-import { fetchPublicCatalog, registerClick } from '../services/catalog';
+import { fetchPublicCatalog, registerClick, registerPageView } from '../services/catalog';
 import { isSupabaseConfigured } from '../lib/supabase';
 import {
-  KWAI_URL,
   STORE_NAME,
   STORE_TAGLINE,
-  TIKTOK_URL,
   getTrafficSource,
   normalize,
 } from '../lib/utils';
@@ -47,6 +45,10 @@ export default function StorePage() {
           const product = loadedProducts.find((item) => String(item.code) === productCode);
           if (product) setSelectedProduct(product);
         }
+        
+        // Registrar visita 
+        const src = new URLSearchParams(window.location.search).get('src') || 'direto';
+        registerPageView(src);
       })
       .catch((err: Error) => { if (mounted) setError(err.message); })
       .finally(() => { if (mounted) setLoading(false); });
