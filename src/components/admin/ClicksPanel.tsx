@@ -20,7 +20,7 @@ export function ClicksPanel({ notify }: Props) {
     setLoading(true);
     Promise.all([
       fetchFunnelAnalytics(days),
-      fetchAnalyticsEvents(500) // Puxa bastante histórico para gráficos ricos
+      fetchAnalyticsEvents(days, 5000) 
     ])
       .then(([funnelData, eventsData]) => {
         setAnalytics(funnelData);

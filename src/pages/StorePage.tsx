@@ -47,8 +47,7 @@ export default function StorePage() {
         }
         
         // Registrar visita 
-        const src = new URLSearchParams(window.location.search).get('src') || 'direto';
-        registerPageView(src);
+        registerPageView(source);
       })
       .catch((err: Error) => { if (mounted) setError(err.message); })
       .finally(() => { if (mounted) setLoading(false); });

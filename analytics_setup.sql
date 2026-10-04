@@ -9,20 +9,7 @@ create table if not exists public.page_views (
 
 create index if not exists page_views_source_idx on public.page_views(source);
 
--- RPC pública para registrar visita (visitante anônimo)
-create or replace function public.register_page_view(p_source text default null)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.page_views(source)
-  values (left(coalesce(p_source, 'direto'), 40));
-end;
-$$;
-
-grant execute on function public.register_page_view(text) to anon, authenticated;
+-- Função substituída pela versão com mais parâmetros abaixo.
 
 -- ROW LEVEL SECURITY PARA PAGE_VIEWS
 alter table public.page_views enable row level security;
@@ -44,6 +31,10 @@ ADD COLUMN IF NOT EXISTS device TEXT,
 ADD COLUMN IF NOT EXISTS browser TEXT,
 ADD COLUMN IF NOT EXISTS referrer TEXT,
 ADD COLUMN IF NOT EXISTS pathname TEXT;
+
+-- Drop old functions to prevent ambiguous overload errors in PostgREST
+DROP FUNCTION IF EXISTS public.register_page_view(text);
+DROP FUNCTION IF EXISTS public.register_click(uuid, text);
 
 CREATE OR REPLACE FUNCTION public.register_page_view(
   p_source text,
@@ -78,3 +69,5 @@ BEGIN
 END;
 \$\$ LANGUAGE plpgsql SECURITY DEFINER;
 
+GRANT EXECUTE ON FUNCTION public.register_page_view(text, uuid, text, text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.register_click(uuid, text, uuid, text, text, text, text) TO anon, authenticated;

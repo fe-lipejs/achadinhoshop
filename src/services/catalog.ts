@@ -224,10 +224,11 @@ export async function fetchFunnelAnalytics(days = 30): Promise<import('../types'
     .sort((a, b) => b.views - a.views);
 }
 
-export async function fetchAnalyticsEvents(limit = 100): Promise<import('../types').AnalyticsEvent[]> {
+export async function fetchAnalyticsEvents(days = 30, limit = 5000): Promise<import('../types').AnalyticsEvent[]> {
+  const since = new Date(Date.now() - days * 86400000).toISOString();
   const [viewsRes, clicksRes] = await Promise.all([
-    supabase.from('page_views').select('id, source, created_at, visitor_id, device, browser, referrer, pathname').order('created_at', { ascending: false }).limit(limit),
-    supabase.from('product_clicks').select('id, source, created_at, visitor_id, device, browser, referrer, pathname, products(title, code)').order('created_at', { ascending: false }).limit(limit)
+    supabase.from('page_views').select('id, source, created_at, visitor_id, device, browser, referrer, pathname').gte('created_at', since).order('created_at', { ascending: false }).limit(limit),
+    supabase.from('product_clicks').select('id, source, created_at, visitor_id, device, browser, referrer, pathname, products(title, code)').gte('created_at', since).order('created_at', { ascending: false }).limit(limit)
   ]);
   
   const events: import('../types').AnalyticsEvent[] = [];
