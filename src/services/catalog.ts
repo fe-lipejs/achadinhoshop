@@ -52,6 +52,7 @@ function getDeviceInfo() {
 }
 
 export function registerClick(productId: string, source: string): void {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return;
   const url = import.meta.env.VITE_SUPABASE_URL as string;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
   try {
@@ -78,6 +79,7 @@ export function registerClick(productId: string, source: string): void {
 }
 
 export function registerPageView(source: string): void {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return;
   const url = import.meta.env.VITE_SUPABASE_URL as string;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
   try {
