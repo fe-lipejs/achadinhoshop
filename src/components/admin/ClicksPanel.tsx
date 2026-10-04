@@ -400,7 +400,12 @@ function DeviceCard({ icon, name, count, total }: any) {
 }
 
 function DynamicVisitsChart({ events }: { events: AnalyticsEvent[] }) {
-  const [mode, setMode] = useState<'dia' | 'semana' | 'ano'>('dia');
+  const [mode, setMode] = useState<'dia' | 'mes' | 'ano'>('dia');
+  
+  const today = new Date();
+  const [selectedDay, setSelectedDay] = useState(today.getDay()); // 0-6
+  const [selectedMonth, setSelectedMonth] = useState(today.getMonth()); // 0-11
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
   const chartData = useMemo(() => {
     let data: { label: string; count: number; height: number }[] = [];
@@ -410,50 +415,93 @@ function DynamicVisitsChart({ events }: { events: AnalyticsEvent[] }) {
       const hours = Array(8).fill(0); // 0h, 3h, 6h, 9h, 12h, 15h, 18h, 21h
       const labels = ['0h', '3h', '6h', '9h', '12h', '15h', '18h', '21h'];
       visits.forEach(v => {
-        const h = new Date(v.createdAt).getHours();
-        const index = Math.floor(h / 3);
-        if (index >= 0 && index < 8) hours[index]++;
+        const d = new Date(v.createdAt);
+        if (d.getDay() === selectedDay) {
+          const index = Math.floor(d.getHours() / 3);
+          if (index >= 0 && index < 8) hours[index]++;
+        }
       });
       const max = Math.max(...hours, 1);
       data = hours.map((c, i) => ({ label: labels[i], count: c, height: (c / max) * 100 }));
     } 
-    else if (mode === 'semana') {
+    else if (mode === 'mes') {
       const days = Array(7).fill(0);
-      const labels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+      const labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
       visits.forEach(v => {
-        const d = new Date(v.createdAt).getDay(); // 0 = Sun
-        if (d >= 0 && d < 7) days[d]++;
+        const d = new Date(v.createdAt);
+        if (d.getMonth() === selectedMonth && d.getFullYear() === selectedYear) {
+          const dw = d.getDay();
+          if (dw >= 0 && dw < 7) days[dw]++;
+        }
       });
       const max = Math.max(...days, 1);
       data = days.map((c, i) => ({ label: labels[i], count: c, height: (c / max) * 100 }));
     } 
     else if (mode === 'ano') {
       const months = Array(12).fill(0);
-      const labels = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+      const labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
       visits.forEach(v => {
-        const m = new Date(v.createdAt).getMonth(); // 0 = Jan
-        if (m >= 0 && m < 12) months[m]++;
+        const d = new Date(v.createdAt);
+        if (d.getFullYear() === selectedYear) {
+          const m = d.getMonth();
+          if (m >= 0 && m < 12) months[m]++;
+        }
       });
       const max = Math.max(...months, 1);
       data = months.map((c, i) => ({ label: labels[i], count: c, height: (c / max) * 100 }));
     }
 
     return data;
-  }, [events, mode]);
+  }, [events, mode, selectedDay, selectedMonth, selectedYear]);
+
+  // Render Sub-Selectors based on Mode
+  const renderSubSelectors = () => {
+    if (mode === 'dia') {
+      const days = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+      return (
+        <div style={{ display: 'flex', gap: 8 }}>
+          {days.map((d, i) => (
+            <button key={i} onClick={() => setSelectedDay(i)} style={{ width: 32, height: 32, borderRadius: 16, border: selectedDay === i ? '2px solid #000' : '1px solid #e5e5e5', background: selectedDay === i ? '#000' : '#fff', color: selectedDay === i ? '#fff' : '#666', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>{d}</button>
+          ))}
+        </div>
+      );
+    }
+    if (mode === 'mes') {
+      const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      return (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {months.map((m, i) => (
+            <button key={i} onClick={() => setSelectedMonth(i)} style={{ padding: '6px 12px', borderRadius: 16, border: selectedMonth === i ? '2px solid #000' : '1px solid #e5e5e5', background: selectedMonth === i ? '#000' : '#fff', color: selectedMonth === i ? '#fff' : '#666', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>{m}</button>
+          ))}
+        </div>
+      );
+    }
+    if (mode === 'ano') {
+      const years = [today.getFullYear() - 1, today.getFullYear(), today.getFullYear() + 1];
+      return (
+        <div style={{ display: 'flex', gap: 6 }}>
+          {years.map((y) => (
+            <button key={y} onClick={() => setSelectedYear(y)} style={{ padding: '6px 16px', borderRadius: 16, border: selectedYear === y ? '2px solid #000' : '1px solid #e5e5e5', background: selectedYear === y ? '#000' : '#fff', color: selectedYear === y ? '#fff' : '#666', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>{y}</button>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0, fontSize: '1rem', color: '#000' }}>
           <BarChart3 size={18} color="#000" /> Gráfico de Visitas
         </h3>
         
-        {/* TOGGLES */}
+        {/* TOGGLES (Dia / Mês / Ano) */}
         <div style={{ display: 'flex', background: '#f5f5f5', padding: '4px', borderRadius: '8px', border: '1px solid #e5e5e5' }}>
           {[
-            { id: 'dia', label: 'Hoje' },
-            { id: 'semana', label: 'Semana' },
-            { id: 'ano', label: 'Ano' }
+            { id: 'dia', label: 'Por Hora' },
+            { id: 'mes', label: 'Por Dia' },
+            { id: 'ano', label: 'Por Mês' }
           ].map(opt => (
             <button
               key={opt.id}
@@ -472,18 +520,23 @@ function DynamicVisitsChart({ events }: { events: AnalyticsEvent[] }) {
         </div>
       </div>
       
+      {/* SUB-SELECTORS (D S T Q Q S S / Jan Fev... ) */}
+      <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #f0f0f0' }}>
+        {renderSubSelectors()}
+      </div>
+
       {/* CHART BARS */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: mode === 'ano' ? 4 : 8, height: 140, paddingBottom: 8, borderBottom: '1px solid #eee' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: mode === 'ano' ? 4 : 8, height: 160, paddingBottom: 8, borderBottom: '1px solid #eee' }}>
         {chartData.map((d, i) => (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }} title={`${d.count} visitas`}>
             <div style={{ 
               width: '100%', 
-              maxWidth: mode === 'ano' ? 14 : 24, 
+              maxWidth: mode === 'ano' ? 14 : 32, 
               height: `${d.height}%`, 
-              background: d.count > 0 ? '#b102b5' : 'transparent', // Magenta / Roxo estilo imagem
+              background: d.count > 0 ? '#b102b5' : 'transparent', 
               borderRadius: '6px 6px 0 0', 
               minHeight: d.count > 0 ? 4 : 0, 
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
+              transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' 
             }} />
           </div>
         ))}
