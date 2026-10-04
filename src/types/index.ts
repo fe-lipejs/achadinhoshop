@@ -45,3 +45,12 @@ export interface FunnelAnalytics {
   views: number;
   clicks: number;
 }
+
+export interface AnalyticsEvent {
+  id: string;
+  type: 'visit' | 'click';
+  source: string;
+  createdAt: string;
+  productName?: string;
+  productCode?: number;
+}

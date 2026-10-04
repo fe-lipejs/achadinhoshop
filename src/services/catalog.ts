@@ -137,7 +137,7 @@ export async function uploadImage(file: File): Promise<string> {
 export async function deleteImage(publicUrl: string): Promise<void> {
   const marker = `/storage/v1/object/public/${STORAGE_BUCKET}/`;
   const index = publicUrl.indexOf(marker);
-  if (index === -1) return; // imagem externa, não é nossa
+  if (index === -1) return; // imagem externa, nÃ£o Ã© nossa
   const path = publicUrl.slice(index + marker.length);
   await supabase.storage.from(STORAGE_BUCKET).remove([path]);
 }
@@ -173,4 +173,41 @@ export async function fetchFunnelAnalytics(days = 30): Promise<import('../types'
     .map(([source, stats]) => ({ source, views: stats.views, clicks: stats.clicks }))
     .sort((a, b) => b.views - a.views);
 }
+
+export async function fetchAnalyticsEvents(limit = 100): Promise<import('../types').AnalyticsEvent[]> {
+  const [viewsRes, clicksRes] = await Promise.all([
+    supabase.from('page_views').select('id, source, created_at').order('created_at', { ascending: false }).limit(limit),
+    supabase.from('product_clicks').select('id, source, created_at, products(title, code)').order('created_at', { ascending: false }).limit(limit)
+  ]);
+  
+  const events: import('../types').AnalyticsEvent[] = [];
+  
+  if (viewsRes.data) {
+    viewsRes.data.forEach(v => {
+      events.push({
+        id: 'v_' + v.id,
+        type: 'visit',
+        source: v.source || 'direto',
+        createdAt: v.created_at
+      });
+    });
+  }
+  
+  if (clicksRes.data) {
+    clicksRes.data.forEach((c: any) => {
+      const product = Array.isArray(c.products) ? c.products[0] : c.products;
+      events.push({
+        id: 'c_' + c.id,
+        type: 'click',
+        source: c.source || 'direto',
+        createdAt: c.created_at,
+        productName: product?.title,
+        productCode: product?.code
+      });
+    });
+  }
+  
+  return events.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
+}
+
 
