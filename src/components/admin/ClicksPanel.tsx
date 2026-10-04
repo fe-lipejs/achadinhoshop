@@ -65,19 +65,6 @@ export function ClicksPanel({ notify }: Props) {
     return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 5);
   }, [events]);
 
-  // GRÁFICO 1: VISITAS POR HORA DO DIA (0h as 23h)
-  const visitsByHour = useMemo(() => {
-    const hours = Array(24).fill(0);
-    events.forEach(e => {
-      if (e.type === 'visit') {
-        const h = new Date(e.createdAt).getHours();
-        hours[h]++;
-      }
-    });
-    const max = Math.max(...hours, 1);
-    return hours.map((count, hour) => ({ hour, count, height: (count / max) * 100 }));
-  }, [events]);
-
   // GRÁFICO 2: VISITAS E CLIQUES POR DIA (Últimos 7 dias)
   const chartByDay = useMemo(() => {
     const daysMap: Record<string, { date: string, label: string, visits: number, clicks: number }> = {};
@@ -200,28 +187,8 @@ export function ClicksPanel({ notify }: Props) {
       {/* GRÁFICOS ROW 1 (BARRAS) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 24 }}>
         
-        {/* VISITAS POR HORA DO DIA (Estilo iPhone) */}
-        <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '20px' }}>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 4px 0', fontSize: '1rem', color: '#000' }}>
-            <Clock size={18} color="#000" /> Horários de Pico
-          </h3>
-          <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: 24 }}>Fluxo de acessos nas 24h do dia.</p>
-          
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 140, paddingBottom: 8, borderBottom: '1px solid #eee' }}>
-            {visitsByHour.map((h, i) => (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }} title={`${h.hour}h: ${h.count} visitas`}>
-                <div style={{ width: '100%', maxWidth: 12, height: `${h.height}%`, background: h.count > 0 ? '#000' : 'transparent', borderRadius: '4px 4px 0 0', minHeight: h.count > 0 ? 4 : 0, transition: 'height 0.3s' }} />
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, color: '#888', fontSize: '0.75rem', fontWeight: 600 }}>
-            <span>0h</span>
-            <span>6h</span>
-            <span>12h</span>
-            <span>18h</span>
-            <span>23h</span>
-          </div>
-        </div>
+        {/* GRÁFICO DINÂMICO DE VISITAS (DIA / SEMANA / ANO) */}
+        <DynamicVisitsChart events={events} />
 
         {/* FUNIL POR DIA DA SEMANA */}
         <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '20px' }}>
@@ -428,6 +395,106 @@ function DeviceCard({ icon, name, count, total }: any) {
       <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000', marginTop: 12 }}>{count}</div>
       <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: 4 }}>{name}</div>
       <div style={{ fontSize: '0.75rem', color: '#000', fontWeight: 700, background: '#eee', padding: '2px 8px', borderRadius: 12 }}>{pct}%</div>
+    </div>
+  );
+}
+
+function DynamicVisitsChart({ events }: { events: AnalyticsEvent[] }) {
+  const [mode, setMode] = useState<'dia' | 'semana' | 'ano'>('dia');
+
+  const chartData = useMemo(() => {
+    let data: { label: string; count: number; height: number }[] = [];
+    const visits = events.filter(e => e.type === 'visit');
+
+    if (mode === 'dia') {
+      const hours = Array(8).fill(0); // 0h, 3h, 6h, 9h, 12h, 15h, 18h, 21h
+      const labels = ['0h', '3h', '6h', '9h', '12h', '15h', '18h', '21h'];
+      visits.forEach(v => {
+        const h = new Date(v.createdAt).getHours();
+        const index = Math.floor(h / 3);
+        if (index >= 0 && index < 8) hours[index]++;
+      });
+      const max = Math.max(...hours, 1);
+      data = hours.map((c, i) => ({ label: labels[i], count: c, height: (c / max) * 100 }));
+    } 
+    else if (mode === 'semana') {
+      const days = Array(7).fill(0);
+      const labels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+      visits.forEach(v => {
+        const d = new Date(v.createdAt).getDay(); // 0 = Sun
+        if (d >= 0 && d < 7) days[d]++;
+      });
+      const max = Math.max(...days, 1);
+      data = days.map((c, i) => ({ label: labels[i], count: c, height: (c / max) * 100 }));
+    } 
+    else if (mode === 'ano') {
+      const months = Array(12).fill(0);
+      const labels = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+      visits.forEach(v => {
+        const m = new Date(v.createdAt).getMonth(); // 0 = Jan
+        if (m >= 0 && m < 12) months[m]++;
+      });
+      const max = Math.max(...months, 1);
+      data = months.map((c, i) => ({ label: labels[i], count: c, height: (c / max) * 100 }));
+    }
+
+    return data;
+  }, [events, mode]);
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '12px', padding: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0, fontSize: '1rem', color: '#000' }}>
+          <BarChart3 size={18} color="#000" /> Gráfico de Visitas
+        </h3>
+        
+        {/* TOGGLES */}
+        <div style={{ display: 'flex', background: '#f5f5f5', padding: '4px', borderRadius: '8px', border: '1px solid #e5e5e5' }}>
+          {[
+            { id: 'dia', label: 'Hoje' },
+            { id: 'semana', label: 'Semana' },
+            { id: 'ano', label: 'Ano' }
+          ].map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => setMode(opt.id as any)}
+              style={{ 
+                background: mode === opt.id ? '#fff' : 'transparent', 
+                color: mode === opt.id ? '#000' : '#666',
+                border: mode === opt.id ? '1px solid #ccc' : '1px solid transparent', 
+                padding: '4px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+                transition: 'all 0.2s', boxShadow: mode === opt.id ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {/* CHART BARS */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: mode === 'ano' ? 4 : 8, height: 140, paddingBottom: 8, borderBottom: '1px solid #eee' }}>
+        {chartData.map((d, i) => (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }} title={`${d.count} visitas`}>
+            <div style={{ 
+              width: '100%', 
+              maxWidth: mode === 'ano' ? 14 : 24, 
+              height: `${d.height}%`, 
+              background: d.count > 0 ? '#b102b5' : 'transparent', // Magenta / Roxo estilo imagem
+              borderRadius: '6px 6px 0 0', 
+              minHeight: d.count > 0 ? 4 : 0, 
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
+            }} />
+          </div>
+        ))}
+      </div>
+      
+      {/* LABELS */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, color: '#888', fontSize: '0.75rem', fontWeight: 600 }}>
+        {chartData.map((d, i) => (
+          <span key={i} style={{ flex: 1, textAlign: 'center' }}>{d.label}</span>
+        ))}
+      </div>
     </div>
   );
 }
