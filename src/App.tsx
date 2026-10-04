@@ -21,6 +21,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<StorePage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/analytics" element={<AdminPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

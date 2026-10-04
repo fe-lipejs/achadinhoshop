@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import {
   Eye,
   EyeOff,
@@ -30,7 +30,29 @@ type Tab = 'products' | 'categories' | 'clicks';
 
 export default function AdminPage() {
   const { session, isAdmin, loading: authLoading } = useAuth();
-  const [tab, setTab] = useState<Tab>('products');
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  const currentTab = location.pathname.includes('/analytics') ? 'clicks' : 'products';
+  const [tab, setTab] = useState<Tab>(currentTab as Tab);
+  
+  useEffect(() => {
+    if (location.pathname.includes('/analytics')) {
+      setTab('clicks');
+    } else {
+      setTab((prev) => (prev === 'clicks' ? 'products' : prev));
+    }
+  }, [location.pathname]);
+
+  const handleTabChange = (newTab: Tab) => {
+    setTab(newTab);
+    if (newTab === 'clicks') {
+      navigate('/admin/analytics');
+    } else {
+      navigate('/admin');
+    }
+  };
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,7 +196,7 @@ export default function AdminPage() {
             type="button"
             id="tab-products"
             className={`tab ${tab === 'products' ? 'active' : ''}`}
-            onClick={() => setTab('products')}
+            onClick={() => handleTabChange('products')}
           >
             Produtos
           </button>
@@ -182,7 +204,7 @@ export default function AdminPage() {
             type="button"
             id="tab-categories"
             className={`tab ${tab === 'categories' ? 'active' : ''}`}
-            onClick={() => setTab('categories')}
+            onClick={() => handleTabChange('categories')}
           >
             Categorias
           </button>
@@ -190,7 +212,7 @@ export default function AdminPage() {
             type="button"
             id="tab-clicks"
             className={`tab ${tab === 'clicks' ? 'active' : ''}`}
-            onClick={() => setTab('clicks')}
+            onClick={() => handleTabChange('clicks')}
           >
             Cliques
           </button>
