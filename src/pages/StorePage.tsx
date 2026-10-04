@@ -131,6 +131,30 @@ export default function StorePage() {
         </div>
       </header>
 
+      {/* MOBILE MENU OVERLAY */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 sm:hidden" onClick={() => setMobileMenuOpen(false)}>
+          <div 
+            className="absolute right-0 top-0 bottom-0 w-64 bg-white shadow-2xl flex flex-col p-5 animate-in slide-in-from-right-full duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-8">
+              <span className="font-bold text-lg">Menu</span>
+              <button onClick={() => setMobileMenuOpen(false)} className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <Link to="/admin" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 text-black font-medium transition-colors border border-gray-200">
+                <User size={18} />
+                Acessar Lojista
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* BANNER PROMOCIONAL FULL-WIDTH */}
       <div className="w-full bg-black">
         <img 
@@ -184,7 +208,7 @@ export default function StorePage() {
         {/* C&A STYLE FILTERS (CHIPS) */}
         <div className="flex flex-col items-center sm:items-start mt-8 mb-4">
           <span className="text-[13px] text-gray-500 mb-3">Deseja filtrar por categoria:</span>
-          <div className={`flex gap-3 overflow-x-auto pb-2 w-full sm:w-auto [&::-webkit-scrollbar]:hidden ${mobileMenuOpen ? 'flex-wrap justify-center sm:justify-start' : 'justify-start'}`}>
+          <div className="flex gap-3 overflow-x-auto pb-2 w-full sm:w-auto [&::-webkit-scrollbar]:hidden justify-start">
             <button
               type="button"
               className={`shrink-0 inline-flex items-center justify-center min-w-[90px] px-5 py-2.5 rounded-full border transition-all text-[14px] font-semibold ${categoryId === 'all' && storeFilter === 'all' ? 'border-black bg-black text-white' : 'border-gray-300 bg-white text-black hover:border-black'}`}
