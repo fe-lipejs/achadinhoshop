@@ -43,12 +43,12 @@ CREATE OR REPLACE FUNCTION public.register_page_view(
   p_browser text DEFAULT NULL,
   p_referrer text DEFAULT NULL,
   p_pathname text DEFAULT NULL
-) RETURNS void AS \$\$
+) RETURNS void AS $$
 BEGIN
   INSERT INTO public.page_views (source, visitor_id, device, browser, referrer, pathname)
   VALUES (p_source, p_visitor_id, p_device, p_browser, p_referrer, p_pathname);
 END;
-\$\$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION public.register_click(
   p_product_id uuid,
@@ -58,7 +58,7 @@ CREATE OR REPLACE FUNCTION public.register_click(
   p_browser text DEFAULT NULL,
   p_referrer text DEFAULT NULL,
   p_pathname text DEFAULT NULL
-) RETURNS void AS \$\$
+) RETURNS void AS $$
 BEGIN
   INSERT INTO public.product_clicks (product_id, source, visitor_id, device, browser, referrer, pathname)
   VALUES (p_product_id, p_source, p_visitor_id, p_device, p_browser, p_referrer, p_pathname);
@@ -67,7 +67,7 @@ BEGIN
   SET clicks = clicks + 1
   WHERE id = p_product_id;
 END;
-\$\$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.register_page_view(text, uuid, text, text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.register_click(uuid, text, uuid, text, text, text, text) TO anon, authenticated;
