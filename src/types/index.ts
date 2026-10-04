@@ -53,4 +53,9 @@ export interface AnalyticsEvent {
   createdAt: string;
   productName?: string;
   productCode?: number;
+  visitorId?: string;
+  device?: string;
+  browser?: string;
+  referrer?: string;
+  pathname?: string;
 }

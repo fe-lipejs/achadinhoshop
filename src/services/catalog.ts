@@ -18,10 +18,44 @@ export async function fetchPublicCatalog(): Promise<{ products: Product[]; categ
   return { products: productsRes.data as Product[], categories: categoriesRes.data as Category[] };
 }
 
+function getVisitorId() {
+  let vid = localStorage.getItem('visitor_id');
+  if (!vid) {
+    vid = crypto.randomUUID();
+    localStorage.setItem('visitor_id', vid);
+  }
+  return vid;
+}
+
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  let device = 'Desktop';
+  if (/mobile/i.test(ua)) device = 'Mobile';
+  if (/tablet/i.test(ua)) device = 'Tablet';
+  
+  let browser = 'Outro';
+  if (ua.includes('Chrome')) browser = 'Chrome';
+  else if (ua.includes('Safari')) browser = 'Safari';
+  else if (ua.includes('Firefox')) browser = 'Firefox';
+  
+  let os = 'Outro';
+  if (ua.includes('Win')) os = 'Windows';
+  else if (ua.includes('Mac')) os = 'macOS';
+  else if (ua.includes('Linux')) os = 'Linux';
+  else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('like Mac')) os = 'iOS';
+  
+  return {
+    device,
+    browser: `${os} · ${browser}`
+  };
+}
+
 export function registerClick(productId: string, source: string): void {
   const url = import.meta.env.VITE_SUPABASE_URL as string;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
   try {
+    const { device, browser } = getDeviceInfo();
     void fetch(url + '/rest/v1/rpc/register_click', {
       method: 'POST',
       keepalive: true,
@@ -30,7 +64,15 @@ export function registerClick(productId: string, source: string): void {
         apikey: key,
         Authorization: 'Bearer ' + key,
       },
-      body: JSON.stringify({ p_product_id: productId, p_source: source }),
+      body: JSON.stringify({ 
+        p_product_id: productId, 
+        p_source: source,
+        p_visitor_id: getVisitorId(),
+        p_device: device,
+        p_browser: browser,
+        p_referrer: document.referrer || 'Direto',
+        p_pathname: window.location.pathname
+      }),
     }).catch(() => undefined);
   } catch {}
 }
@@ -39,6 +81,7 @@ export function registerPageView(source: string): void {
   const url = import.meta.env.VITE_SUPABASE_URL as string;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
   try {
+    const { device, browser } = getDeviceInfo();
     void fetch(url + '/rest/v1/rpc/register_page_view', {
       method: 'POST',
       keepalive: true,
@@ -47,7 +90,14 @@ export function registerPageView(source: string): void {
         apikey: key,
         Authorization: 'Bearer ' + key,
       },
-      body: JSON.stringify({ p_source: source }),
+      body: JSON.stringify({ 
+        p_source: source,
+        p_visitor_id: getVisitorId(),
+        p_device: device,
+        p_browser: browser,
+        p_referrer: document.referrer || 'Direto',
+        p_pathname: window.location.pathname
+      }),
     }).catch(() => undefined);
   } catch {}
 }
@@ -176,8 +226,8 @@ export async function fetchFunnelAnalytics(days = 30): Promise<import('../types'
 
 export async function fetchAnalyticsEvents(limit = 100): Promise<import('../types').AnalyticsEvent[]> {
   const [viewsRes, clicksRes] = await Promise.all([
-    supabase.from('page_views').select('id, source, created_at').order('created_at', { ascending: false }).limit(limit),
-    supabase.from('product_clicks').select('id, source, created_at, products(title, code)').order('created_at', { ascending: false }).limit(limit)
+    supabase.from('page_views').select('id, source, created_at, visitor_id, device, browser, referrer, pathname').order('created_at', { ascending: false }).limit(limit),
+    supabase.from('product_clicks').select('id, source, created_at, visitor_id, device, browser, referrer, pathname, products(title, code)').order('created_at', { ascending: false }).limit(limit)
   ]);
   
   const events: import('../types').AnalyticsEvent[] = [];
@@ -188,7 +238,12 @@ export async function fetchAnalyticsEvents(limit = 100): Promise<import('../type
         id: 'v_' + v.id,
         type: 'visit',
         source: v.source || 'direto',
-        createdAt: v.created_at
+        createdAt: v.created_at,
+        visitorId: v.visitor_id,
+        device: v.device,
+        browser: v.browser,
+        referrer: v.referrer,
+        pathname: v.pathname
       });
     });
   }
@@ -202,7 +257,12 @@ export async function fetchAnalyticsEvents(limit = 100): Promise<import('../type
         source: c.source || 'direto',
         createdAt: c.created_at,
         productName: product?.title,
-        productCode: product?.code
+        productCode: product?.code,
+        visitorId: c.visitor_id,
+        device: c.device,
+        browser: c.browser,
+        referrer: c.referrer,
+        pathname: c.pathname
       });
     });
   }

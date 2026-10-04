@@ -313,7 +313,7 @@ export default function AdminPage() {
           <CategoriesPanel categories={categories} products={products} onChange={setCategories} notify={notify} />
         )}
 
-        {tab === 'clicks' && <ClicksPanel products={products} notify={notify} />}
+        {tab === 'clicks' && <ClicksPanel notify={notify} />}
       </main>
 
       {editing !== undefined && (
