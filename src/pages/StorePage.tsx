@@ -83,7 +83,7 @@ export default function StorePage() {
           <div className="flex items-center justify-between gap-4 h-[80px]">
             <a href="/" className="flex items-center gap-4 font-bold text-[1.4rem] tracking-tight shrink-0 text-white" aria-label={`Ir para ${STORE_NAME}`}>
               {/* Logo maior */}
-              <div className="relative w-14 h-14 rounded-full overflow-hidden flex items-center justify-center bg-white border border-gray-200">
+              <div className="relative w-11 h-11 sm:w-14 sm:h-14 rounded-full overflow-hidden flex items-center justify-center bg-white border border-gray-200">
                 <img 
                   src="/logo.png" 
                   alt="Logo" 
@@ -93,6 +93,9 @@ export default function StorePage() {
               </div>
               <span className="hidden sm:block">{STORE_NAME}</span>
             </a>
+
+            {/* Nome da loja centralizado apenas no mobile */}
+            <span className="font-bold text-[1.1rem] sm:hidden tracking-tight text-white flex-1 text-center truncate px-2">{STORE_NAME}</span>
 
             <div className="relative flex-1 max-w-[500px] hidden sm:block mx-auto">
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -155,8 +158,7 @@ export default function StorePage() {
         </div>
       )}
 
-      {/* BANNER PROMOCIONAL FULL-WIDTH */}
-      <div className="w-full bg-black">
+      <div className="w-full bg-black mb-4">
         <img 
           src="/banner.png" 
           alt="Banner de Destaque" 
@@ -164,26 +166,26 @@ export default function StorePage() {
         />
       </div>
 
-      <div className="bg-white border-b border-gray-200 py-3 sm:hidden px-4 shadow-sm">
-        <div className="relative w-full">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          <input
-            id="search-mobile"
-            type="search"
-            placeholder="Buscar produtos..."
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="w-full py-2.5 pl-9 pr-9 rounded-full border border-gray-300 bg-gray-50 text-[15px] outline-none focus:bg-white focus:border-black focus:ring-1 focus:ring-black transition-all"
-          />
-          {query && (
-            <button type="button" onClick={() => setQuery('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 rounded-full hover:bg-gray-200">
-              <X size={14} />
-            </button>
-          )}
-        </div>
-      </div>
-
       <main className="w-full max-w-6xl mx-auto px-4 sm:px-5">
+        {/* BUSCA MOBILE NA ÁREA DOS PRODUTOS */}
+        <div className="sm:hidden mb-6">
+          <div className="relative w-full">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              id="search-mobile"
+              type="search"
+              placeholder="Buscar produtos..."
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="w-full py-2.5 pl-9 pr-9 rounded-full border border-gray-300 bg-gray-50 text-[15px] outline-none focus:bg-white focus:border-black focus:ring-1 focus:ring-black transition-all"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 rounded-full hover:bg-gray-200">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </div>
         {!hasActiveFilters && (
           <section className="py-12 pb-8 text-center sm:text-left hidden sm:block">
             <div className="flex flex-col gap-3">

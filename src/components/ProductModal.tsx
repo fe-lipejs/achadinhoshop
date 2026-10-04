@@ -42,7 +42,7 @@ export function ProductModal({ product, onClose, onBuy }: Props) {
       >
         <button 
           type="button" 
-          className="absolute right-3 top-3 z-10 p-2 bg-black/5 text-gray-500 rounded-full hover:bg-black/10 transition-colors" 
+          className="absolute right-3 top-3 z-10 p-2.5 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors border-2 border-white" 
           onClick={onClose} 
           aria-label="Fechar"
         >
