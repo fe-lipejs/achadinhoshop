@@ -37,29 +37,30 @@ export function ProductModal({ product, onClose, onBuy }: Props) {
       aria-label={product.title}
     >
       <div 
-        className="relative w-full max-w-4xl bg-white sm:rounded-xl shadow-2xl flex flex-col sm:flex-row overflow-hidden max-h-[90vh] sm:max-h-[85vh] animate-[sheet-up_0.35s_ease-out] sm:animate-[rise_0.3s_ease-out] rounded-t-xl" 
+        className="relative w-full max-w-4xl bg-white sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] sm:max-h-[85vh] animate-[sheet-up_0.35s_ease-out] sm:animate-[rise_0.3s_ease-out] rounded-t-xl" 
         onClick={(e) => e.stopPropagation()}
       >
         <button 
           type="button" 
-          className="absolute right-3 top-3 z-10 p-2.5 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors border-2 border-white" 
+          className="absolute right-3 top-3 z-20 p-2.5 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors border-2 border-white" 
           onClick={onClose} 
           aria-label="Fechar"
         >
           <X size={20} />
         </button>
 
-        <div className="w-full sm:w-[45%] bg-white shrink-0 aspect-square sm:aspect-auto sm:border-r border-gray-100 relative">
-          {product.image_url ? (
-            <img className="w-full h-full object-contain p-6" src={product.image_url} alt={product.title} />
-          ) : (
-            <div className="w-full h-full grid place-items-center bg-gray-50 text-gray-300">
-              <ShoppingBag size={48} strokeWidth={1} />
-            </div>
-          )}
-        </div>
+        <div className="flex-1 min-h-0 flex flex-col sm:flex-row overflow-y-auto sm:overflow-hidden w-full">
+          <div className="w-full sm:w-[45%] bg-white shrink-0 aspect-square sm:aspect-auto sm:border-r border-gray-100 relative">
+            {product.image_url ? (
+              <img className="w-full h-full object-contain p-6" src={product.image_url} alt={product.title} />
+            ) : (
+              <div className="w-full h-full grid place-items-center bg-gray-50 text-gray-300">
+                <ShoppingBag size={48} strokeWidth={1} />
+              </div>
+            )}
+          </div>
 
-        <div className="flex-1 flex flex-col p-5 sm:p-8 overflow-y-auto">
+          <div className="flex-1 flex flex-col p-5 sm:p-8 sm:overflow-y-auto">
           <div className="flex justify-between items-center text-[12px] font-semibold tracking-wide text-gray-400 mb-2">
             <span>Item #{product.code}</span>
             {(product.rating !== null || product.sold_label) && (
@@ -143,6 +144,7 @@ export function ProductModal({ product, onClose, onBuy }: Props) {
               <span>Compra segura no app ou site oficial. O preço pode variar.</span>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
