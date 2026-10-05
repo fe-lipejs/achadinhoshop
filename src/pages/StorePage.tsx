@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Menu, PackageSearch, Search, X, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import {
   STORE_NAME,
   STORE_TAGLINE,
+  getTrafficCampaign,
   getTrafficSource,
   normalize,
 } from '../lib/utils';
@@ -28,6 +29,15 @@ export default function StorePage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [source] = useState(() => getTrafficSource());
+  const [campaign] = useState(() => getTrafficCampaign());
+  const pageViewSent = useRef(false);
+
+  // Registrar a visita IMEDIATAMENTE (não espera o catálogo carregar)
+  useEffect(() => {
+    if (pageViewSent.current) return;
+    pageViewSent.current = true;
+    registerPageView(source, campaign);
+  }, [source, campaign]);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -45,16 +55,13 @@ export default function StorePage() {
           const product = loadedProducts.find((item) => String(item.code) === productCode);
           if (product) setSelectedProduct(product);
         }
-        
-        // Registrar visita 
-        registerPageView(source);
       })
       .catch((err: Error) => { if (mounted) setError(err.message); })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
 
-  const handleBuy = useCallback((product: Product) => registerClick(product.id, source), [source]);
+  const handleBuy = useCallback((product: Product) => registerClick(product.id, source, campaign), [source, campaign]);
   const handleCloseProduct = useCallback(() => setSelectedProduct(null), []);
   const clearFilters = useCallback(() => { setQuery(''); setCategoryId('all'); setStoreFilter('all'); }, []);
 

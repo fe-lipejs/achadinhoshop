@@ -58,4 +58,6 @@ export interface AnalyticsEvent {
   browser?: string;
   referrer?: string;
   pathname?: string;
+  campaign?: string | null;
+  query?: string | null;
 }

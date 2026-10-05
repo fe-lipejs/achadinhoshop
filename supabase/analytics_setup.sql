@@ -1,0 +1,6 @@
+-- =====================================================================
+--  ARQUIVO DESATIVADO — NÃO RODE.
+--  Este script criava versões duplicadas das funções de rastreamento
+--  (visitor_id como text), o que quebrava visitas e cliques (PGRST203).
+--  Use supabase/003_fix_analytics.sql no lugar.
+-- =====================================================================

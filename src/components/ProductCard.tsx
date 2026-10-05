@@ -106,7 +106,7 @@ export function ProductCard({ product, index, onOpen, onBuy }: Props) {
             }`}
             href={product.affiliate_url}
             target="_blank"
-            rel="nofollow sponsored noopener noreferrer"
+            rel="nofollow sponsored noopener"
             onClick={() => onBuy(product)}
           >
             Ver na {STORE_LABEL[product.store]} <ExternalLink size={14} />

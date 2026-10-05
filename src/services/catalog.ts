@@ -18,90 +18,165 @@ export async function fetchPublicCatalog(): Promise<{ products: Product[]; categ
   return { products: productsRes.data as Product[], categories: categoriesRes.data as Category[] };
 }
 
-function getVisitorId() {
-  let vid = localStorage.getItem('visitor_id');
-  if (!vid) {
-    vid = crypto.randomUUID();
-    localStorage.setItem('visitor_id', vid);
+// ---------------------------------------------------------------- Rastreamento
+
+/** Gera UUID v4 mesmo em navegadores antigos / navegadores internos de apps. */
+function generateId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch {
+    /* segue para o fallback */
   }
-  return vid;
+  const bytes = new Uint8Array(16);
+  try {
+    crypto.getRandomValues(bytes);
+  } catch {
+    for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-function getDeviceInfo() {
-  const ua = navigator.userAgent;
+let memoryVisitorId: string | null = null;
+
+/** ID anônimo do visitante. Nunca lança erro (storage pode estar bloqueado). */
+function getVisitorId(): string {
+  if (memoryVisitorId) return memoryVisitorId;
+  try {
+    let vid = localStorage.getItem('visitor_id');
+    if (!vid) {
+      vid = generateId();
+      localStorage.setItem('visitor_id', vid);
+    }
+    memoryVisitorId = vid;
+    return vid;
+  } catch {
+    memoryVisitorId = generateId();
+    return memoryVisitorId;
+  }
+}
+
+function getDeviceInfo(): { device: string; browser: string } {
+  const ua = navigator.userAgent || '';
+
+  // Dispositivo
   let device = 'Desktop';
-  if (/mobile/i.test(ua)) device = 'Mobile';
-  if (/tablet/i.test(ua)) device = 'Tablet';
-  
-  let browser = 'Outro';
-  if (ua.includes('Chrome')) browser = 'Chrome';
-  else if (ua.includes('Safari')) browser = 'Safari';
-  else if (ua.includes('Firefox')) browser = 'Firefox';
-  
+  if (/ipad|tablet|playbook|silk/i.test(ua) || (/android/i.test(ua) && !/mobile/i.test(ua))) device = 'Tablet';
+  else if (/mobi|iphone|ipod|android/i.test(ua)) device = 'Mobile';
+
+  // Sistema (ordem importa: Android contém "Linux", iOS contém "Mac OS X")
   let os = 'Outro';
-  if (ua.includes('Win')) os = 'Windows';
-  else if (ua.includes('Mac')) os = 'macOS';
-  else if (ua.includes('Linux')) os = 'Linux';
-  else if (ua.includes('Android')) os = 'Android';
-  else if (ua.includes('like Mac')) os = 'iOS';
-  
-  return {
-    device,
-    browser: `${os} · ${browser}`
-  };
+  if (/android/i.test(ua)) os = 'Android';
+  else if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
+  else if (/windows/i.test(ua)) os = 'Windows';
+  else if (/mac os x|macintosh/i.test(ua)) os = 'macOS';
+  else if (/cros/i.test(ua)) os = 'ChromeOS';
+  else if (/linux/i.test(ua)) os = 'Linux';
+
+  // Navegador / app (navegadores internos primeiro)
+  let browser = 'Outro';
+  if (/musical_ly|bytedancewebview|trill/i.test(ua)) browser = 'App TikTok';
+  else if (/kwai/i.test(ua)) browser = 'App Kwai';
+  else if (/instagram/i.test(ua)) browser = 'App Instagram';
+  else if (/fban|fbav|fb_iab/i.test(ua)) browser = 'App Facebook';
+  else if (/whatsapp/i.test(ua)) browser = 'App WhatsApp';
+  else if (/edg\//i.test(ua)) browser = 'Edge';
+  else if (/opr\/|opera/i.test(ua)) browser = 'Opera';
+  else if (/samsungbrowser/i.test(ua)) browser = 'Samsung Internet';
+  else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
+  else if (/chrome|crios/i.test(ua)) browser = 'Chrome';
+  else if (/safari/i.test(ua)) browser = 'Safari';
+
+  return { device, browser: `${os} · ${browser}` };
 }
 
-export function registerClick(productId: string, source: string): void {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return;
-  const url = import.meta.env.VITE_SUPABASE_URL as string;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+function isLocalhost(): boolean {
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
+}
+
+/** Envia um evento para uma função RPC do Supabase sem travar a navegação. */
+function sendTrackingEvent(rpc: 'register_click' | 'register_page_view', payload: Record<string, unknown>): void {
+  if (isLocalhost()) return;
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+  if (!url || !key) {
+    console.warn('[rastreamento] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY não configurados no deploy.');
+    return;
+  }
   try {
-    const { device, browser } = getDeviceInfo();
-    void fetch(url + '/rest/v1/rpc/register_click', {
+    fetch(`${url}/rest/v1/rpc/${rpc}`, {
       method: 'POST',
       keepalive: true,
       headers: {
         'Content-Type': 'application/json',
         apikey: key,
-        Authorization: 'Bearer ' + key,
+        Authorization: `Bearer ${key}`,
       },
-      body: JSON.stringify({ 
-        p_product_id: productId, 
-        p_source: source,
-        p_visitor_id: getVisitorId(),
-        p_device: device,
-        p_browser: browser,
-        p_referrer: document.referrer || 'Direto',
-        p_pathname: window.location.pathname
-      }),
-    }).catch(() => undefined);
-  } catch {}
+      body: JSON.stringify(payload),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const detail = await response.text().catch(() => '');
+          console.error(`[rastreamento] ${rpc} falhou (HTTP ${response.status})`, detail);
+        }
+      })
+      .catch((err) => console.error(`[rastreamento] ${rpc} erro de rede`, err));
+  } catch (err) {
+    console.error(`[rastreamento] ${rpc} exceção`, err);
+  }
 }
 
-export function registerPageView(source: string): void {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return;
-  const url = import.meta.env.VITE_SUPABASE_URL as string;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-  try {
-    const { device, browser } = getDeviceInfo();
-    void fetch(url + '/rest/v1/rpc/register_page_view', {
-      method: 'POST',
-      keepalive: true,
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: key,
-        Authorization: 'Bearer ' + key,
-      },
-      body: JSON.stringify({ 
-        p_source: source,
-        p_visitor_id: getVisitorId(),
-        p_device: device,
-        p_browser: browser,
-        p_referrer: document.referrer || 'Direto',
-        p_pathname: window.location.pathname
-      }),
-    }).catch(() => undefined);
-  } catch {}
+export function registerClick(productId: string, source: string, campaign: string | null = null): void {
+  const { device, browser } = getDeviceInfo();
+  sendTrackingEvent('register_click', {
+    p_product_id: productId,
+    p_source: source,
+    p_visitor_id: getVisitorId(),
+    p_device: device,
+    p_browser: browser,
+    p_referrer: document.referrer || 'Direto',
+    p_pathname: window.location.pathname,
+    p_campaign: campaign,
+  });
+}
+
+export function registerPageView(source: string, campaign: string | null = null): void {
+  const { device, browser } = getDeviceInfo();
+  sendTrackingEvent('register_page_view', {
+    p_source: source,
+    p_visitor_id: getVisitorId(),
+    p_device: device,
+    p_browser: browser,
+    p_referrer: document.referrer || 'Direto',
+    p_pathname: window.location.pathname,
+    p_campaign: campaign,
+    p_query: window.location.search || null,
+  });
+}
+
+/**
+ * O Supabase devolve no máximo 1000 linhas por requisição (padrão do projeto).
+ * Esta função busca em páginas até trazer tudo (com teto de segurança).
+ */
+async function fetchAllPages<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  maxRows = 50000,
+): Promise<T[]> {
+  const pageSize = 1000;
+  const all: T[] = [];
+  for (let from = 0; from < maxRows; from += pageSize) {
+    const { data, error } = await build(from, from + pageSize - 1);
+    if (error) throw error;
+    const rows = data || [];
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+  return all;
 }
 
 // ---------------------------------------------------------------- Admin: produtos
@@ -158,14 +233,11 @@ export async function deleteCategory(id: string): Promise<void> {
 // ---------------------------------------------------------------- Admin: cliques
 export async function fetchClicksBySource(days = 30): Promise<ClickBySource[]> {
   const since = new Date(Date.now() - days * 86400000).toISOString();
-  const { data, error } = await supabase
-    .from('product_clicks')
-    .select('source')
-    .gte('created_at', since)
-    .limit(10000);
-  if (error) throw error;
+  const data = await fetchAllPages<{ source: string | null }>((from, to) =>
+    supabase.from('product_clicks').select('source').gte('created_at', since).order('id').range(from, to),
+  );
   const map = new Map<string, number>();
-  (data as { source: string | null }[]).forEach((row) => {
+  data.forEach((row) => {
     const key = row.source || 'direto';
     map.set(key, (map.get(key) || 0) + 1);
   });
@@ -199,23 +271,24 @@ export async function deleteImage(publicUrl: string): Promise<void> {
 export async function fetchFunnelAnalytics(days = 30): Promise<import('../types').FunnelAnalytics[]> {
   const since = new Date(Date.now() - days * 86400000).toISOString();
   
-  const [viewsRes, clicksRes] = await Promise.all([
-    supabase.from('page_views').select('source').gte('created_at', since).limit(10000),
-    supabase.from('product_clicks').select('source').gte('created_at', since).limit(10000)
+  const [views, clicks] = await Promise.all([
+    fetchAllPages<{ source: string | null }>((from, to) =>
+      supabase.from('page_views').select('source').gte('created_at', since).order('id').range(from, to),
+    ),
+    fetchAllPages<{ source: string | null }>((from, to) =>
+      supabase.from('product_clicks').select('source').gte('created_at', since).order('id').range(from, to),
+    ),
   ]);
-  
-  if (viewsRes.error) throw viewsRes.error;
-  if (clicksRes.error) throw clicksRes.error;
   
   const map = new Map<string, { views: number; clicks: number }>();
   
-  ;(viewsRes.data as { source: string | null }[]).forEach(row => {
+  views.forEach(row => {
     const key = row.source || 'direto';
     if (!map.has(key)) map.set(key, { views: 0, clicks: 0 });
     map.get(key)!.views++;
   });
   
-  ;(clicksRes.data as { source: string | null }[]).forEach(row => {
+  clicks.forEach(row => {
     const key = row.source || 'direto';
     if (!map.has(key)) map.set(key, { views: 0, clicks: 0 });
     map.get(key)!.clicks++;
@@ -228,47 +301,62 @@ export async function fetchFunnelAnalytics(days = 30): Promise<import('../types'
 
 export async function fetchAnalyticsEvents(days = 30, limit = 5000): Promise<import('../types').AnalyticsEvent[]> {
   const since = new Date(Date.now() - days * 86400000).toISOString();
-  const [viewsRes, clicksRes] = await Promise.all([
-    supabase.from('page_views').select('id, source, created_at, visitor_id, device, browser, referrer, pathname').gte('created_at', since).order('created_at', { ascending: false }).limit(limit),
-    supabase.from('product_clicks').select('id, source, created_at, visitor_id, device, browser, referrer, pathname, products(title, code)').gte('created_at', since).order('created_at', { ascending: false }).limit(limit)
+  const [views, clicks] = await Promise.all([
+    fetchAllPages<any>((from, to) =>
+      supabase
+        .from('page_views')
+        .select('id, source, created_at, visitor_id, device, browser, referrer, pathname, campaign, query')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .range(from, to),
+      limit,
+    ),
+    fetchAllPages<any>((from, to) =>
+      supabase
+        .from('product_clicks')
+        .select('id, source, created_at, visitor_id, device, browser, referrer, pathname, campaign, products(title, code)')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .range(from, to),
+      limit,
+    ),
   ]);
   
   const events: import('../types').AnalyticsEvent[] = [];
   
-  if (viewsRes.data) {
-    viewsRes.data.forEach(v => {
-      events.push({
-        id: 'v_' + v.id,
-        type: 'visit',
-        source: v.source || 'direto',
-        createdAt: v.created_at,
-        visitorId: v.visitor_id,
-        device: v.device,
-        browser: v.browser,
-        referrer: v.referrer,
-        pathname: v.pathname
-      });
+  views.forEach((v) => {
+    events.push({
+      id: 'v_' + v.id,
+      type: 'visit',
+      source: v.source || 'direto',
+      createdAt: v.created_at,
+      visitorId: v.visitor_id,
+      device: v.device,
+      browser: v.browser,
+      referrer: v.referrer,
+      pathname: v.pathname,
+      campaign: v.campaign,
+      query: v.query,
     });
-  }
+  });
   
-  if (clicksRes.data) {
-    clicksRes.data.forEach((c: any) => {
-      const product = Array.isArray(c.products) ? c.products[0] : c.products;
-      events.push({
-        id: 'c_' + c.id,
-        type: 'click',
-        source: c.source || 'direto',
-        createdAt: c.created_at,
-        productName: product?.title,
-        productCode: product?.code,
-        visitorId: c.visitor_id,
-        device: c.device,
-        browser: c.browser,
-        referrer: c.referrer,
-        pathname: c.pathname
-      });
+  clicks.forEach((c) => {
+    const product = Array.isArray(c.products) ? c.products[0] : c.products;
+    events.push({
+      id: 'c_' + c.id,
+      type: 'click',
+      source: c.source || 'direto',
+      createdAt: c.created_at,
+      productName: product?.title,
+      productCode: product?.code,
+      visitorId: c.visitor_id,
+      device: c.device,
+      browser: c.browser,
+      referrer: c.referrer,
+      pathname: c.pathname,
+      campaign: c.campaign,
     });
-  }
+  });
   
   return events.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
 }

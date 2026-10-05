@@ -133,7 +133,7 @@ export function ProductModal({ product, onClose, onBuy }: Props) {
                   : 'bg-[#3483fa] text-white hover:bg-[#2968c8]'
               }`}
               href={product.affiliate_url}
-              target="_blank" rel="nofollow sponsored noopener noreferrer"
+              target="_blank" rel="nofollow sponsored noopener"
               onClick={() => onBuy(product)}
             >
               Comprar na {STORE_LABEL[product.store]} <ExternalLink size={18} />

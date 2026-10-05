@@ -35,9 +35,8 @@ export function ClicksPanel({ notify }: Props) {
   const totalClicks = useMemo(() => analytics.reduce((acc, curr) => acc + curr.clicks, 0), [analytics]);
   
   const uniqueVisitors = useMemo(() => {
-    const ids = new Set(events.filter(e => e.visitorId && e.type === 'visit').map(e => e.visitorId));
-    return ids.size > 0 ? ids.size : (totalViews > 0 ? Math.max(1, Math.floor(totalViews * 0.75)) : 0);
-  }, [events, totalViews]);
+    return new Set(events.filter(e => e.visitorId && e.type === 'visit').map(e => e.visitorId)).size;
+  }, [events]);
   
   const intentRate = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : '0.0';
   const dropoffRate = totalViews > 0 ? (100 - Number(intentRate)).toFixed(1) : '0.0';
@@ -67,16 +66,18 @@ export function ClicksPanel({ notify }: Props) {
 
   // GRÁFICO 2: VISITAS E CLIQUES POR DIA (Últimos 7 dias)
   const chartByDay = useMemo(() => {
+    const localKey = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const daysMap: Record<string, { date: string, label: string, visits: number, clicks: number }> = {};
-    // Setup last X days
+    // Setup last X days (fuso local, não UTC)
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const k = d.toISOString().slice(0, 10);
+      const k = localKey(d);
       daysMap[k] = { date: k, label: d.toLocaleDateString('pt-BR', { weekday: 'short' }), visits: 0, clicks: 0 };
     }
     events.forEach(e => {
-      const k = e.createdAt.slice(0, 10);
+      const k = localKey(new Date(e.createdAt));
       if (daysMap[k]) {
         if (e.type === 'visit') daysMap[k].visits++;
         if (e.type === 'click') daysMap[k].clicks++;
@@ -88,14 +89,18 @@ export function ClicksPanel({ notify }: Props) {
   }, [events, days]);
 
   function exportCSV() {
-    const headers = ['Data/Hora', 'Tipo', 'Origem', 'Página', 'Dispositivo', 'Navegador'];
+    const headers = ['Data/Hora', 'Tipo', 'Origem', 'Campanha', 'Página', 'Parâmetros', 'Dispositivo', 'Navegador', 'Referrer', 'Visitante'];
     const rows = events.map(e => [
       new Date(e.createdAt).toLocaleString('pt-BR'),
       e.type === 'visit' ? 'Visita' : `Clique: #${e.productCode} ${e.productName}`,
       e.source,
+      e.campaign || '',
       e.pathname || '/',
+      e.query || '',
       e.device || 'Desconhecido',
-      e.browser || 'Desconhecido'
+      e.browser || 'Desconhecido',
+      e.referrer || '',
+      e.visitorId || ''
     ]);
     
     const csvContent = [headers, ...rows].map(e => e.join(';')).join('\n');
@@ -116,7 +121,10 @@ export function ClicksPanel({ notify }: Props) {
     return e.source.toLowerCase().includes(term) || 
            e.pathname?.toLowerCase().includes(term) ||
            e.productName?.toLowerCase().includes(term) ||
-           e.browser?.toLowerCase().includes(term);
+           e.browser?.toLowerCase().includes(term) ||
+           e.campaign?.toLowerCase().includes(term) ||
+           e.query?.toLowerCase().includes(term) ||
+           (e.productCode !== undefined && `#${e.productCode}`.includes(term));
   });
 
   return (
@@ -359,9 +367,22 @@ export function ClicksPanel({ notify }: Props) {
                     </div>
                   </td>
                   <td style={{ padding: '16px 20px', color: '#444', fontSize: '0.85rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, width: 'fit-content', border: '1px solid #eaeaea' }}>
-                      <Globe size={14} color="#888" /> {e.referrer || e.source || 'Tráfego Direto'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, width: 'fit-content', border: '1px solid #eaeaea', textTransform: 'capitalize', fontWeight: 600 }}>
+                      <Globe size={14} color="#888" /> {e.source || 'direto'}
                     </div>
+                    {e.campaign && (
+                      <div style={{ fontSize: '0.75rem', color: '#666', marginTop: 4 }}>Campanha: {e.campaign}</div>
+                    )}
+                    {e.referrer && e.referrer !== 'Direto' && (
+                      <div style={{ fontSize: '0.75rem', color: '#888', marginTop: 4, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.referrer}>
+                        Veio de: {e.referrer}
+                      </div>
+                    )}
+                    {e.query && (
+                      <div style={{ fontSize: '0.7rem', color: '#aaa', marginTop: 4, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.query}>
+                        {e.query}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
