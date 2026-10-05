@@ -17,17 +17,38 @@ export function ClicksPanel({ notify }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      fetchFunnelAnalytics(days),
-      fetchAnalyticsEvents(days, 5000) 
-    ])
-      .then(([funnelData, eventsData]) => {
-        setAnalytics(funnelData);
-        setEvents(eventsData);
-      })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+    let isMounted = true;
+    
+    const loadData = async (showLoading = false) => {
+      if (showLoading) setLoading(true);
+      try {
+        const [funnelData, eventsData] = await Promise.all([
+          fetchFunnelAnalytics(days),
+          fetchAnalyticsEvents(days, 5000)
+        ]);
+        if (isMounted) {
+          setAnalytics(funnelData);
+          setEvents(eventsData);
+        }
+      } catch (err: any) {
+        if (isMounted) setError(err.message);
+      } finally {
+        if (isMounted && showLoading) setLoading(false);
+      }
+    };
+
+    // Carregamento inicial (mostra esqueleto/texto de loading)
+    loadData(true);
+
+    // Auto-refresh silencioso a cada 10 segundos
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [days]);
 
   // Aggregated Metrics
@@ -136,10 +157,23 @@ export function ClicksPanel({ notify }: Props) {
           <h1 style={{ display: 'flex', alignItems: 'center', gap: 12, margin: 0, fontSize: '1.75rem', fontWeight: 700, color: '#000' }}>
             <TrendingUp color="#000" />
             Analytics Avançado
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', background: '#ecfdf5', color: '#059669', padding: '4px 10px', borderRadius: '16px', fontWeight: 600, border: '1px solid #a7f3d0' }}>
+              <span style={{ width: 8, height: 8, background: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+              AO VIVO
+            </span>
           </h1>
           <p style={{ color: '#666', margin: '4px 0 0 0', fontSize: '0.95rem' }}>
-            Acompanhe o funil de conversão, perfil de visitantes e horários de pico.
+            Acompanhe o funil de conversão, perfil de visitantes e horários de pico. Dados atualizados a cada 10 segundos.
           </p>
+          <style>
+            {`
+              @keyframes pulse {
+                0% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.4; transform: scale(0.8); }
+                100% { opacity: 1; transform: scale(1); }
+              }
+            `}
+          </style>
         </div>
         
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
