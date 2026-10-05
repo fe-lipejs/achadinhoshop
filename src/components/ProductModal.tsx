@@ -37,7 +37,7 @@ export function ProductModal({ product, onClose, onBuy }: Props) {
       aria-label={product.title}
     >
       <div 
-        className="relative w-full max-w-4xl bg-white sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] sm:max-h-[85vh] animate-[sheet-up_0.35s_ease-out] sm:animate-[rise_0.3s_ease-out] rounded-t-xl" 
+        className="relative w-full max-w-4xl bg-white sm:rounded-xl shadow-2xl flex flex-col overflow-hidden h-[85dvh] sm:h-auto max-h-[90dvh] sm:max-h-[85vh] animate-[sheet-up_0.35s_ease-out] sm:animate-[rise_0.3s_ease-out] rounded-t-xl" 
         onClick={(e) => e.stopPropagation()}
       >
         <button 
