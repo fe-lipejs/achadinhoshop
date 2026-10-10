@@ -15,6 +15,8 @@ export function ClicksPanel({ notify }: Props) {
   
   const [days, setDays] = useState(7);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   useEffect(() => {
     let isMounted = true;
@@ -147,6 +149,10 @@ export function ClicksPanel({ notify }: Props) {
            e.query?.toLowerCase().includes(term) ||
            (e.productCode !== undefined && `#${e.productCode}`.includes(term));
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedEvents = filteredEvents.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage);
 
   return (
     <div className="analytics-dashboard" style={{ background: '#fff', color: '#000', padding: '24px', borderRadius: '16px', minHeight: '100vh' }}>
@@ -336,7 +342,7 @@ export function ClicksPanel({ notify }: Props) {
               type="text" 
               placeholder="Ex: tiktok, safari, iphone, #123..." 
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               style={{ width: '100%', background: '#f9f9f9', border: '1px solid #ddd', color: '#000', padding: '10px 12px 10px 36px', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
             />
           </div>
@@ -354,9 +360,9 @@ export function ClicksPanel({ notify }: Props) {
               </tr>
             </thead>
             <tbody>
-              {filteredEvents.length === 0 ? (
+              {paginatedEvents.length === 0 ? (
                 <tr><td colSpan={5} style={{ padding: 60, textAlign: 'center', color: '#888' }}>Nenhum evento registrado com esse filtro.</td></tr>
-              ) : filteredEvents.map((e, idx) => (
+              ) : paginatedEvents.map((e, idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid #eee', transition: 'background 0.2s' }} onMouseEnter={ev => ev.currentTarget.style.background='#f9f9f9'} onMouseLeave={ev => ev.currentTarget.style.background='transparent'}>
                   <td style={{ padding: '16px 20px' }}>
                     <div style={{ color: '#000', fontWeight: 600, fontSize: '0.9rem' }}>{new Date(e.createdAt).toLocaleTimeString('pt-BR')}</div>
@@ -423,6 +429,34 @@ export function ClicksPanel({ notify }: Props) {
             </tbody>
           </table>
         </div>
+
+        {/* PAGINATION */}
+        {totalPages > 1 && (
+          <div style={{ padding: '16px 20px', borderTop: '1px solid #e5e5e5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+            <span style={{ fontSize: '0.85rem', color: '#666' }}>
+              Mostrando {((safeCurrentPage - 1) * itemsPerPage) + 1} a {Math.min(safeCurrentPage * itemsPerPage, filteredEvents.length)} de {filteredEvents.length} eventos
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safeCurrentPage === 1}
+                style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '6px', background: safeCurrentPage === 1 ? '#f5f5f5' : '#fff', color: safeCurrentPage === 1 ? '#999' : '#000', cursor: safeCurrentPage === 1 ? 'not-allowed' : 'pointer' }}
+              >
+                Anterior
+              </button>
+              <span style={{ padding: '6px 12px', fontSize: '0.85rem', color: '#000', fontWeight: 600 }}>
+                Página {safeCurrentPage} de {totalPages}
+              </span>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage === totalPages}
+                style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '6px', background: safeCurrentPage === totalPages ? '#f5f5f5' : '#fff', color: safeCurrentPage === totalPages ? '#999' : '#000', cursor: safeCurrentPage === totalPages ? 'not-allowed' : 'pointer' }}
+              >
+                Próxima
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       
     </div>
