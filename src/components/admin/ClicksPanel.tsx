@@ -16,7 +16,7 @@ export function ClicksPanel({ notify }: Props) {
   const [days, setDays] = useState(7);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50;
+  const [itemsPerPage, setItemsPerPage] = useState(50);
 
   useEffect(() => {
     let isMounted = true;
@@ -336,15 +336,27 @@ export function ClicksPanel({ notify }: Props) {
             <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#666' }}>Cada interação registrada detalhadamente. Pesquise por ID do produto, origem ou data.</p>
           </div>
           
-          <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-            <Search size={16} color="#999" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-            <input 
-              type="text" 
-              placeholder="Ex: tiktok, safari, iphone, #123..." 
-              value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              style={{ width: '100%', background: '#f9f9f9', border: '1px solid #ddd', color: '#000', padding: '10px 12px 10px 36px', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
-            />
+          <div style={{ display: 'flex', gap: 12, flex: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <select
+              value={itemsPerPage}
+              onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+              style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #ddd', background: '#f9f9f9', outline: 'none', cursor: 'pointer', color: '#000', fontSize: '0.9rem' }}
+            >
+              <option value={10}>10 por página</option>
+              <option value={30}>30 por página</option>
+              <option value={50}>50 por página</option>
+              <option value={100}>100 por página</option>
+            </select>
+            <div style={{ position: 'relative', flex: 1, maxWidth: 300, minWidth: 200 }}>
+              <Search size={16} color="#999" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+              <input 
+                type="text" 
+                placeholder="Ex: tiktok, safari, iphone, #123..." 
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                style={{ width: '100%', background: '#f9f9f9', border: '1px solid #ddd', color: '#000', padding: '10px 12px 10px 36px', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
+              />
+            </div>
           </div>
         </div>
 
