@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ImagePlus, Link2, Trash2, X } from 'lucide-react';
+import { Check, ImagePlus, Link2, Sparkles, Trash2, Undo2, X } from 'lucide-react';
 import type { Category, Highlight, Product, ProductInput, Store } from '../../types';
 import { createProduct, deleteImage, updateProduct, uploadImage } from '../../services/catalog';
 import { HIGHLIGHT_LABEL } from '../../lib/utils';
+import { removeImageBackground } from '../../lib/backgroundRemoval';
 
 interface Props {
   product: Product | null;
@@ -33,6 +34,13 @@ function detectStore(url: string): Store | null {
   return null;
 }
 
+interface ImageBackup {
+  file: File | null;
+  preview: string | null;
+  externalImage: string;
+  imageUrl: string | null;
+}
+
 export function ProductForm({ product, categories, onClose, onSaved }: Props) {
   const [title, setTitle] = useState(product?.title ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
@@ -59,6 +67,12 @@ export function ProductForm({ product, categories, onClose, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Estados para remoção de fundo com IA
+  const [removingBg, setRemovingBg] = useState(false);
+  const [bgRemoved, setBgRemoved] = useState(false);
+  const [bgProgress, setBgProgress] = useState<string | null>(null);
+  const [imageBackup, setImageBackup] = useState<ImageBackup | null>(null);
+
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -83,6 +97,8 @@ export function ProductForm({ product, categories, onClose, onSaved }: Props) {
     if (f.size > MAX_SIZE_MB * 1024 * 1024) return setError(`Imagem muito grande (máx. ${MAX_SIZE_MB} MB).`);
     setError(null);
     setExternalImage('');
+    setBgRemoved(false);
+    setImageBackup(null);
     setFile(f);
   }
 
@@ -91,7 +107,57 @@ export function ProductForm({ product, categories, onClose, onSaved }: Props) {
     setPreview(null);
     setImageUrl(null);
     setExternalImage('');
+    setBgRemoved(false);
+    setImageBackup(null);
     if (fileRef.current) fileRef.current.value = '';
+  }
+
+  async function handleRemoveBackground() {
+    const currentSource = file || (externalImage.trim() ? externalImage.trim() : null) || preview || imageUrl;
+    if (!currentSource) {
+      setError('Adicione uma imagem antes de remover o fundo.');
+      return;
+    }
+
+    setError(null);
+    setRemovingBg(true);
+    setBgProgress('Iniciando processamento...');
+
+    // Salva backup para permitir desfazer
+    setImageBackup({
+      file,
+      preview,
+      externalImage,
+      imageUrl,
+    });
+
+    try {
+      const result = await removeImageBackground(currentSource, (_pct, msg) => {
+        setBgProgress(msg);
+      });
+
+      setFile(result.file);
+      setPreview(result.previewUrl);
+      setExternalImage('');
+      setImageUrl(null);
+      setBgRemoved(true);
+    } catch (err) {
+      console.error('Erro ao remover fundo:', err);
+      setError(err instanceof Error ? err.message : 'Falha ao remover o fundo da imagem.');
+    } finally {
+      setRemovingBg(false);
+      setBgProgress(null);
+    }
+  }
+
+  function handleUndoBgRemoval() {
+    if (!imageBackup) return;
+    setFile(imageBackup.file);
+    setPreview(imageBackup.preview);
+    setExternalImage(imageBackup.externalImage);
+    setImageUrl(imageBackup.imageUrl);
+    setBgRemoved(false);
+    setImageBackup(null);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -141,6 +207,8 @@ export function ProductForm({ product, categories, onClose, onSaved }: Props) {
     }
   }
 
+  const hasImage = Boolean(preview || externalImage || imageUrl);
+
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal form-modal" onClick={(e) => e.stopPropagation()}>
@@ -183,31 +251,105 @@ export function ProductForm({ product, categories, onClose, onSaved }: Props) {
             <input id="pf-title" className="input" value={title} onChange={(e) => setTitle(e.target.value)} required />
           </div>
 
+          {/* ÁREA DE IMAGEM COM REMOÇÃO DE FUNDO */}
           <div className="field">
-            <label>Imagem</label>
+            <label>Imagem do Produto</label>
             <div className="uploader">
-              <div className="preview">
-                {preview || externalImage ? <img src={preview || externalImage} alt="Prévia" /> : <ImagePlus size={24} />}
+              <div 
+                className="preview"
+                style={{
+                  backgroundImage: (preview || externalImage) ? 'repeating-conic-gradient(#e5e7eb 0 90deg, #ffffff 0 180deg)' : undefined,
+                  backgroundSize: '14px 14px',
+                }}
+              >
+                {preview || externalImage ? (
+                  <img src={preview || externalImage} alt="Prévia" />
+                ) : (
+                  <ImagePlus size={24} />
+                )}
               </div>
               <div className="dropzone">
                 <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => handleFile(e.target.files?.[0])} />
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button type="button" className="btn btn-sm btn-soft" onClick={() => fileRef.current?.click()}>
-                    <ImagePlus size={14} /> Enviar
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button type="button" className="btn btn-sm btn-soft" onClick={() => fileRef.current?.click()} disabled={removingBg}>
+                    <ImagePlus size={14} /> Enviar do Computador
                   </button>
-                  {(preview || externalImage) && (
-                    <button type="button" className="btn btn-sm btn-danger" onClick={removeImage}>
+
+                  {hasImage && !bgRemoved && (
+                    <button 
+                      type="button" 
+                      className="btn btn-sm"
+                      style={{ 
+                        background: '#6b21a8', 
+                        color: '#fff', 
+                        borderColor: '#6b21a8',
+                        boxShadow: '0 1px 3px rgba(107,33,168,0.25)' 
+                      }}
+                      onClick={handleRemoveBackground}
+                      disabled={removingBg || saving}
+                      title="Usa inteligência artificial para deixar a foto sem fundo"
+                    >
+                      {removingBg ? (
+                        <>
+                          <span className="spinner" style={{ color: '#fff', width: 14, height: 14 }} />
+                          <span>Removendo...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={14} />
+                          <span>Remover Fundo (IA)</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+
+                  {bgRemoved && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span className="badge badge-discount" style={{ background: '#10b981', color: '#fff', padding: '5px 8px', borderRadius: 6 }}>
+                        <Check size={12} /> Fundo Removido
+                      </span>
+                      <button 
+                        type="button" 
+                        className="btn btn-sm btn-ghost" 
+                        onClick={handleUndoBgRemoval}
+                        title="Restaurar imagem original com fundo"
+                      >
+                        <Undo2 size={13} /> Desfazer
+                      </button>
+                    </div>
+                  )}
+
+                  {hasImage && (
+                    <button type="button" className="btn btn-sm btn-danger" onClick={removeImage} disabled={removingBg}>
                       <Trash2 size={14} /> Remover
                     </button>
                   )}
                 </div>
+
+                {bgProgress && (
+                  <div style={{ fontSize: '0.8rem', color: '#6b21a8', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <span className="spinner" style={{ color: '#6b21a8', width: 12, height: 12 }} />
+                    <span>{bgProgress}</span>
+                  </div>
+                )}
+
                 <input
                   className="input"
                   style={{ padding: '6px 10px', fontSize: '0.85rem' }}
-                  placeholder="...ou cole a URL da imagem"
+                  placeholder="...ou cole a URL da imagem da Shopee / Mercado Livre"
                   value={externalImage}
-                  onChange={(e) => { setExternalImage(e.target.value); setFile(null); setPreview(null); }}
+                  onChange={(e) => { 
+                    setExternalImage(e.target.value); 
+                    setFile(null); 
+                    setPreview(null); 
+                    setBgRemoved(false);
+                    setImageBackup(null);
+                  }}
+                  disabled={removingBg}
                 />
+                <span className="hint">
+                  Dica: envie um arquivo ou cole um link. O botão <strong>Remover Fundo</strong> deixa a imagem recortada transparente para salvar!
+                </span>
               </div>
             </div>
           </div>
@@ -282,8 +424,8 @@ export function ProductForm({ product, categories, onClose, onSaved }: Props) {
           </div>
 
           <div className="form-footer">
-            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>Cancelar</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
+            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving || removingBg}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" disabled={saving || removingBg}>
               {saving ? <span className="spinner" style={{ color: '#fff' }} /> : 'Salvar'}
             </button>
           </div>

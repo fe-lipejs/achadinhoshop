@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Menu, PackageSearch, Search, X, User } from 'lucide-react';
+import { 
+  Menu, 
+  PackageSearch, 
+  Search, 
+  X, 
+  User
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import type { Category, Product, Store } from '../types';
@@ -126,14 +132,14 @@ export default function StorePage() {
   const activeCategory = usedCategories.find((category) => category.id === categoryId);
 
   return (
-    <div className="min-h-screen bg-white pb-10 font-sans text-black antialiased">
-      {/* HEADER PRETO MINIMALISTA */}
-      <header className="sticky top-0 z-20 bg-black border-b border-black text-white">
+    <div className="min-h-screen bg-[#f8f9fa] pb-10 font-['Poppins'] text-gray-900 antialiased">
+      {/* HEADER PRETO MINIMALISTA ORIGINAL */}
+      <header className="sticky top-0 z-30 bg-black border-b border-black text-white">
         <div className="w-full max-w-6xl mx-auto px-4 sm:px-5">
-          <div className="flex items-center justify-between gap-4 h-[80px]">
-            <a href="/" className="flex items-center gap-4 font-bold text-[1.4rem] tracking-tight shrink-0 text-white" aria-label={`Ir para ${STORE_NAME}`}>
-              {/* Logo maior */}
-              <div className="relative w-11 h-11 sm:w-14 sm:h-14 rounded-full overflow-hidden flex items-center justify-center bg-white border border-gray-200">
+          <div className="flex items-center justify-between gap-4 h-[76px] sm:h-[80px]">
+            {/* LOGO */}
+            <a href="/" className="flex items-center gap-3 font-bold text-[1.35rem] sm:text-[1.4rem] tracking-tight shrink-0 text-white" aria-label={`Ir para ${STORE_NAME}`}>
+              <div className="relative w-11 h-11 sm:w-13 sm:h-13 rounded-full overflow-hidden flex items-center justify-center bg-white border border-gray-200 shadow-sm">
                 <img 
                   src="/logo.png" 
                   alt="Logo" 
@@ -144,9 +150,12 @@ export default function StorePage() {
               <span className="hidden sm:block">{STORE_NAME}</span>
             </a>
 
-            {/* Nome da loja centralizado apenas no mobile */}
-            <span className="font-bold text-[1.1rem] sm:hidden tracking-tight text-white flex-1 text-center truncate px-2">{STORE_NAME}</span>
+            {/* NOME DA LOJA NO MOBILE */}
+            <span className="font-bold text-[1.1rem] sm:hidden tracking-tight text-white flex-1 text-center truncate px-2">
+              {STORE_NAME}
+            </span>
 
+            {/* CAMPO DE BUSCA DESKTOP */}
             <div className="relative flex-1 max-w-[500px] hidden sm:block mx-auto">
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               <input
@@ -156,18 +165,26 @@ export default function StorePage() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 aria-label="Buscar produtos"
-                className="w-full py-3 pl-11 pr-10 rounded-full border border-gray-700 bg-[#1a1a1a] text-white text-[15px] outline-none placeholder:text-gray-400 focus:border-white focus:ring-1 focus:ring-white transition-all"
+                className="w-full py-2.5 pl-11 pr-10 rounded-full border border-gray-700 bg-[#1a1a1a] text-white text-[14.5px] outline-none placeholder:text-gray-400 focus:border-white focus:ring-1 focus:ring-white transition-all"
               />
               {query && (
-                <button type="button" onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 rounded-full hover:text-white hover:bg-white/10">
+                <button 
+                  type="button" 
+                  onClick={() => setQuery('')} 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 rounded-full hover:text-white hover:bg-white/10"
+                >
                   <X size={16} />
                 </button>
               )}
             </div>
 
             <div className="flex gap-2 ml-auto shrink-0 items-center">
-              {/* BOTÃO LOGIN LOJISTA NO HEADER */}
-              <Link to="/admin" className="hidden sm:flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[14px] font-semibold text-white border border-gray-600 hover:border-white hover:bg-white hover:text-black transition-all" title="Acessar painel do lojista">
+              {/* BOTÃO LOGIN LOJISTA */}
+              <Link 
+                to="/admin" 
+                className="hidden sm:flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13.5px] font-semibold text-white border border-gray-600 hover:border-white hover:bg-white hover:text-black transition-all" 
+                title="Acessar painel do lojista"
+              >
                 <User size={16} />
                 Lojista
               </Link>
@@ -176,6 +193,7 @@ export default function StorePage() {
                 type="button"
                 className="p-2 text-white hover:bg-white/10 rounded-full bg-transparent sm:hidden"
                 onClick={() => setMobileMenuOpen((current) => !current)}
+                aria-label="Abrir Menu"
               >
                 <Menu size={24} />
               </button>
@@ -191,15 +209,19 @@ export default function StorePage() {
             className="absolute right-0 top-0 bottom-0 w-64 bg-white shadow-2xl flex flex-col p-5 animate-in slide-in-from-right-full duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-8">
-              <span className="font-bold text-lg">Menu</span>
+            <div className="flex items-center justify-between mb-8 pb-3 border-b border-gray-100">
+              <span className="font-bold text-lg text-gray-900">Menu</span>
               <button onClick={() => setMobileMenuOpen(false)} className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200">
                 <X size={20} />
               </button>
             </div>
             
             <div className="flex flex-col gap-4">
-              <Link to="/admin" className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 text-black font-medium transition-colors border border-gray-200">
+              <Link 
+                to="/admin" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 text-gray-900 font-medium transition-colors border border-gray-200"
+              >
                 <User size={18} />
                 Acessar Lojista
               </Link>
@@ -208,6 +230,7 @@ export default function StorePage() {
         </div>
       )}
 
+      {/* BANNER PRINCIPAL COM FUNDO PRETO */}
       <div className="w-full bg-black mb-4" data-track-section="topo">
         <img 
           src="/banner.png" 
@@ -227,23 +250,28 @@ export default function StorePage() {
               placeholder="Buscar produtos..."
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="w-full py-2.5 pl-9 pr-9 rounded-full border border-gray-300 bg-gray-50 text-[15px] outline-none focus:bg-white focus:border-black focus:ring-1 focus:ring-black transition-all"
+              className="w-full py-2.5 pl-9 pr-9 rounded-full border border-gray-300 bg-white text-[14.5px] outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
             />
             {query && (
-              <button type="button" onClick={() => setQuery('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 rounded-full hover:bg-gray-200">
+              <button 
+                type="button" 
+                onClick={() => setQuery('')} 
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-gray-400 rounded-full hover:bg-gray-200"
+              >
                 <X size={14} />
               </button>
             )}
           </div>
         </div>
+
         {!hasActiveFilters && (
-          <section className="py-12 pb-8 text-center sm:text-left hidden sm:block" data-track-section="topo">
-            <div className="flex flex-col gap-3">
-              <span className="text-[12px] font-semibold tracking-widest text-gray-500 uppercase">Destaques da semana</span>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight m-0 text-black leading-tight">
+          <section className="py-8 pb-6 text-center sm:text-left hidden sm:block" data-track-section="topo">
+            <div className="flex flex-col gap-2">
+              <span className="text-[12px] font-semibold tracking-widest text-gray-400 uppercase">Destaques da semana</span>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight m-0 text-gray-900 leading-tight">
                 {STORE_TAGLINE}
               </h1>
-              <p className="text-gray-500 text-[16px] sm:text-[18px] mt-2 max-w-3xl sm:mx-0 mx-auto font-normal leading-relaxed">
+              <p className="text-gray-500 text-[15px] sm:text-[16px] mt-1 max-w-3xl sm:mx-0 mx-auto font-normal leading-relaxed">
                 Encontre aqui as novidades e promoções com links seguros e diretos.
               </p>
             </div>
@@ -257,27 +285,39 @@ export default function StorePage() {
           </div>
         )}
 
-        {/* C&A STYLE FILTERS (CHIPS) */}
-        <div className="flex flex-col items-center sm:items-start mt-8 mb-4" data-track-section="filtros">
+        {/* CHIPS DE FILTRO DE CATEGORIAS */}
+        <div className="flex flex-col items-center sm:items-start mt-4 mb-6" data-track-section="filtros">
           <span className="text-[13px] text-gray-500 mb-3">Deseja filtrar por categoria:</span>
-          <div className="flex gap-3 overflow-x-auto pb-2 w-full sm:w-auto [&::-webkit-scrollbar]:hidden justify-start">
+          <div className="flex gap-2.5 overflow-x-auto pb-2 w-full sm:w-auto [&::-webkit-scrollbar]:hidden justify-start">
             <button
               type="button"
-              className={`shrink-0 inline-flex items-center justify-center min-w-[90px] px-5 py-2.5 rounded-full border transition-all text-[14px] font-semibold ${categoryId === 'all' && storeFilter === 'all' ? 'border-black bg-black text-white' : 'border-gray-300 bg-white text-black hover:border-black'}`}
+              className={`shrink-0 inline-flex items-center justify-center min-w-[85px] px-4.5 py-2.5 rounded-full border transition-all text-[13.5px] font-semibold ${
+                categoryId === 'all' && storeFilter === 'all' 
+                  ? 'border-black bg-black text-white' 
+                  : 'border-gray-300 bg-white text-black hover:border-black'
+              }`}
               onClick={() => { setCategoryId('all'); setStoreFilter('all'); }}
             >
               Todos
             </button>
             <button
               type="button"
-              className={`shrink-0 inline-flex items-center justify-center min-w-[90px] px-5 py-2.5 rounded-full border transition-all text-[14px] font-semibold ${storeFilter === 'shopee' ? 'border-black bg-black text-white' : 'border-gray-300 bg-white text-black hover:border-black'}`}
+              className={`shrink-0 inline-flex items-center justify-center min-w-[85px] px-4.5 py-2.5 rounded-full border transition-all text-[13.5px] font-semibold ${
+                storeFilter === 'shopee' 
+                  ? 'border-black bg-black text-white' 
+                  : 'border-gray-300 bg-white text-black hover:border-black'
+              }`}
               onClick={() => setStoreFilter(storeFilter === 'shopee' ? 'all' : 'shopee')}
             >
               Shopee
             </button>
             <button
               type="button"
-              className={`shrink-0 inline-flex items-center justify-center min-w-[90px] px-5 py-2.5 rounded-full border transition-all text-[14px] font-semibold ${storeFilter === 'mercadolivre' ? 'border-black bg-black text-white' : 'border-gray-300 bg-white text-black hover:border-black'}`}
+              className={`shrink-0 inline-flex items-center justify-center min-w-[85px] px-4.5 py-2.5 rounded-full border transition-all text-[13.5px] font-semibold ${
+                storeFilter === 'mercadolivre' 
+                  ? 'border-black bg-black text-white' 
+                  : 'border-gray-300 bg-white text-black hover:border-black'
+              }`}
               onClick={() => setStoreFilter(storeFilter === 'mercadolivre' ? 'all' : 'mercadolivre')}
             >
               Mercado Livre
@@ -287,7 +327,11 @@ export default function StorePage() {
               <button
                 type="button"
                 key={category.id}
-                className={`shrink-0 inline-flex items-center justify-center min-w-[90px] px-5 py-2.5 rounded-full border transition-all text-[14px] font-semibold ${categoryId === category.id ? 'border-black bg-black text-white' : 'border-gray-300 bg-white text-black hover:border-black'}`}
+                className={`shrink-0 inline-flex items-center justify-center min-w-[85px] px-4.5 py-2.5 rounded-full border transition-all text-[13.5px] font-semibold ${
+                  categoryId === category.id 
+                    ? 'border-black bg-black text-white' 
+                    : 'border-gray-300 bg-white text-black hover:border-black'
+                }`}
                 onClick={() => setCategoryId(categoryId === category.id ? 'all' : category.id)}
               >
                 {category.emoji && <span className="mr-1.5">{category.emoji}</span>}
@@ -296,7 +340,11 @@ export default function StorePage() {
             ))}
           </div>
           {hasActiveFilters && (
-            <button type="button" className="text-[13px] font-medium text-gray-500 underline mt-3 hover:text-black" onClick={clearFilters}>
+            <button 
+              type="button" 
+              className="text-[12.5px] font-medium text-gray-500 underline mt-2 hover:text-black" 
+              onClick={clearFilters}
+            >
               Limpar filtros de busca
             </button>
           )}
@@ -311,36 +359,46 @@ export default function StorePage() {
         {loading ? (
           <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 mt-6" data-track-section="produtos">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="flex flex-col rounded-lg bg-white border border-gray-100 overflow-hidden shadow-sm">
-                <div className="aspect-square bg-gray-100 animate-pulse" />
-                <div className="p-3">
+              <div key={index} className="flex flex-col rounded-2xl bg-white shadow-2xs overflow-hidden p-3">
+                <div className="aspect-square bg-gray-100 rounded-xl animate-pulse" />
+                <div className="p-1 mt-2">
                   <div className="h-4 bg-gray-200 rounded w-11/12 animate-pulse" />
                   <div className="h-4 bg-gray-200 rounded w-2/3 mt-2 animate-pulse" />
-                  <div className="h-7 bg-gray-200 rounded w-5/12 mt-4 animate-pulse" />
+                  <div className="h-6 bg-gray-200 rounded w-5/12 mt-3 animate-pulse" />
                 </div>
               </div>
             ))}
           </section>
         ) : (
-          <section className="mt-10" data-track-section="produtos">
-            <h2 className="text-[1.35rem] font-bold tracking-tight text-black pb-4 border-b border-gray-200 mb-6 flex items-center gap-2">
-              {query ? 'Produtos encontrados' : activeCategory ? activeCategory.name : 'Mais recentes'}
-              <span className="text-[15px] text-gray-400 font-normal">({filteredProducts.length})</span>
+          <section className="mt-8" data-track-section="produtos">
+            <h2 className="text-[1.35rem] sm:text-[1.45rem] font-bold tracking-tight text-black pb-3 border-b border-gray-200 mb-6 flex items-center justify-between">
+              <span>{query ? 'Produtos encontrados' : activeCategory ? activeCategory.name : 'Mais recentes'}</span>
+              <span className="text-[14px] text-gray-400 font-normal">({filteredProducts.length})</span>
             </h2>
 
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                 {filteredProducts.map((product, index) => (
-                  <ProductCard key={product.id} product={product} index={index} onOpen={setSelectedProduct} onBuy={handleBuy} />
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    index={index} 
+                    onOpen={setSelectedProduct} 
+                    onBuy={handleBuy} 
+                  />
                 ))}
               </div>
             ) : (
               isSupabaseConfigured && (
-                <div className="flex flex-col items-center justify-center py-16 text-center border border-gray-100 rounded-xl mt-4">
+                <div className="flex flex-col items-center justify-center py-16 text-center border border-gray-200 rounded-2xl bg-white mt-4">
                   <PackageSearch size={48} strokeWidth={1.2} className="text-gray-300" />
-                  <h3 className="text-lg font-semibold mt-4 text-black">Nenhum produto encontrado</h3>
-                  <p className="text-gray-500 mt-1 mb-6">Tente buscar por outro nome ou remover os filtros.</p>
-                  <button type="button" className="inline-flex items-center justify-center px-8 py-3.5 rounded-full font-semibold text-[15px] bg-black text-white hover:bg-gray-800 transition-colors" onClick={clearFilters}>
+                  <h3 className="text-lg font-bold mt-4 text-black">Nenhum produto encontrado</h3>
+                  <p className="text-gray-500 mt-1 mb-6 text-sm">Tente buscar por outro nome ou remover os filtros.</p>
+                  <button 
+                    type="button" 
+                    className="inline-flex items-center justify-center px-6 py-3 rounded-full font-bold text-[14px] bg-black text-white hover:bg-gray-800 transition-colors" 
+                    onClick={clearFilters}
+                  >
                     Ver todos os produtos
                   </button>
                 </div>
@@ -349,8 +407,8 @@ export default function StorePage() {
           </section>
         )}
 
-        <footer className="mt-16 py-10 border-t border-gray-200 text-center flex flex-col items-center gap-4" data-track-section="rodape">
-          <div className="flex items-center gap-2 text-black font-bold">
+        <footer className="mt-20 py-10 border-t border-gray-200 text-center flex flex-col items-center gap-4" data-track-section="rodape">
+          <div className="flex items-center gap-2 text-black font-bold text-[1.1rem]">
             <div className="relative w-8 h-8 rounded-full overflow-hidden bg-black text-white flex items-center justify-center">
               <img 
                 src="/logo.png" 
@@ -365,7 +423,7 @@ export default function StorePage() {
             © {new Date().getFullYear()} {STORE_NAME}.<br />
             Todos os produtos foram selecionados a dedo com os melhores preços, vendedores confiáveis e menor prazo de entrega garantido.
           </p>
-          <div className="flex items-center gap-4 mt-2">
+          <div className="flex items-center gap-4 mt-1">
             <Link to="/admin" className="text-[13px] font-semibold text-gray-400 hover:text-black flex items-center gap-1">
               <User size={14} /> Admin
             </Link>
