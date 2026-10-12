@@ -1,5 +1,5 @@
 import { supabase, STORAGE_BUCKET } from '../lib/supabase';
-import type { Category, ClickBySource, Product, ProductInput } from '../types';
+import type { Category, ClickBySource, EngagementSession, Product, ProductInput } from '../types';
 
 // ---------------------------------------------------------------- Vitrine
 export async function fetchPublicCatalog(): Promise<{ products: Product[]; categories: Category[] }> {
@@ -21,7 +21,7 @@ export async function fetchPublicCatalog(): Promise<{ products: Product[]; categ
 // ---------------------------------------------------------------- Rastreamento
 
 /** Gera UUID v4 mesmo em navegadores antigos / navegadores internos de apps. */
-function generateId(): string {
+export function generateId(): string {
   try {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
       return crypto.randomUUID();
@@ -44,7 +44,7 @@ function generateId(): string {
 let memoryVisitorId: string | null = null;
 
 /** ID anônimo do visitante. Nunca lança erro (storage pode estar bloqueado). */
-function getVisitorId(): string {
+export function getVisitorId(): string {
   if (memoryVisitorId) return memoryVisitorId;
   try {
     let vid = localStorage.getItem('visitor_id');
@@ -60,7 +60,7 @@ function getVisitorId(): string {
   }
 }
 
-function getDeviceInfo(): { device: string; browser: string } {
+export function getDeviceInfo(): { device: string; browser: string } {
   const ua = navigator.userAgent || '';
 
   // Dispositivo
@@ -100,7 +100,10 @@ function isLocalhost(): boolean {
 }
 
 /** Envia um evento para uma função RPC do Supabase sem travar a navegação. */
-function sendTrackingEvent(rpc: 'register_click' | 'register_page_view', payload: Record<string, unknown>): void {
+export function sendTrackingEvent(
+  rpc: 'register_click' | 'register_page_view' | 'upsert_page_session',
+  payload: Record<string, unknown>,
+): void {
   if (isLocalhost()) return;
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -242,6 +245,28 @@ export async function fetchClicksBySource(days = 30): Promise<ClickBySource[]> {
     map.set(key, (map.get(key) || 0) + 1);
   });
   return [...map.entries()].map(([source, total]) => ({ source, total })).sort((a, b) => b.total - a.total);
+}
+
+// ---------------------------------------------------------------- Admin: mapa de atenção
+export async function fetchEngagementSessions(days = 30, limit = 10000): Promise<EngagementSession[]> {
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  const rows = await fetchAllPages<EngagementSession>(
+    (from, to) =>
+      supabase
+        .from('page_sessions')
+        .select(
+          'id, visitor_id, source, device, browser, viewport_h, duration_ms, max_scroll_pct, catalog_load_ms, products_total, products_seen, max_product_index, product_opens, buy_clicks, searches, filters, exit_section, section_ms, product_dwell, created_at',
+        )
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .range(from, to),
+    limit,
+  );
+  return rows.map((row) => ({
+    ...row,
+    section_ms: row.section_ms || {},
+    product_dwell: row.product_dwell || {},
+  }));
 }
 
 // ---------------------------------------------------------------- Storage

@@ -6,6 +6,15 @@ import type { Category, Product, Store } from '../types';
 import { fetchPublicCatalog, registerClick, registerPageView } from '../services/catalog';
 import { isSupabaseConfigured } from '../lib/supabase';
 import {
+  markCatalogLoaded,
+  setProductModalOpen,
+  startEngagement,
+  trackBuyClick,
+  trackFilter,
+  trackProductOpen,
+  trackSearch,
+} from '../lib/engagement';
+import {
   STORE_NAME,
   STORE_TAGLINE,
   getTrafficCampaign,
@@ -39,9 +48,13 @@ export default function StorePage() {
     registerPageView(source, campaign);
   }, [source, campaign]);
 
+  // Mapa de atenção: tempo por seção, rolagem e ponto de saída
+  useEffect(() => startEngagement(source, campaign), [source, campaign]);
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setLoading(false);
+      markCatalogLoaded(0);
       return;
     }
     let mounted = true;
@@ -50,18 +63,49 @@ export default function StorePage() {
         if (!mounted) return;
         setProducts(loadedProducts);
         setCategories(loadedCategories);
+        markCatalogLoaded(loadedProducts.length);
         const productCode = new URLSearchParams(window.location.search).get('p');
         if (productCode) {
           const product = loadedProducts.find((item) => String(item.code) === productCode);
           if (product) setSelectedProduct(product);
         }
       })
-      .catch((err: Error) => { if (mounted) setError(err.message); })
+      .catch((err: Error) => {
+        if (!mounted) return;
+        setError(err.message);
+        markCatalogLoaded(0);
+      })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
 
-  const handleBuy = useCallback((product: Product) => registerClick(product.id, source, campaign), [source, campaign]);
+  // Produto aberto (modal) conta como seção própria
+  useEffect(() => {
+    setProductModalOpen(Boolean(selectedProduct));
+    if (selectedProduct) trackProductOpen();
+  }, [selectedProduct]);
+
+  // Busca: conta quando a pessoa para de digitar por 1s
+  useEffect(() => {
+    if (!query.trim()) return;
+    const timer = setTimeout(trackSearch, 1000);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Filtros (categoria / loja)
+  const filtersInitialized = useRef(false);
+  useEffect(() => {
+    if (!filtersInitialized.current) {
+      filtersInitialized.current = true;
+      return;
+    }
+    trackFilter();
+  }, [categoryId, storeFilter]);
+
+  const handleBuy = useCallback((product: Product) => {
+    registerClick(product.id, source, campaign);
+    trackBuyClick();
+  }, [source, campaign]);
   const handleCloseProduct = useCallback(() => setSelectedProduct(null), []);
   const clearFilters = useCallback(() => { setQuery(''); setCategoryId('all'); setStoreFilter('all'); }, []);
 
@@ -164,7 +208,7 @@ export default function StorePage() {
         </div>
       )}
 
-      <div className="w-full bg-black mb-4">
+      <div className="w-full bg-black mb-4" data-track-section="topo">
         <img 
           src="/banner.png" 
           alt="Banner de Destaque" 
@@ -174,7 +218,7 @@ export default function StorePage() {
 
       <main className="w-full max-w-6xl mx-auto px-4 sm:px-5">
         {/* BUSCA MOBILE NA ÁREA DOS PRODUTOS */}
-        <div className="sm:hidden mb-6">
+        <div className="sm:hidden mb-6" data-track-section="filtros">
           <div className="relative w-full">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
@@ -193,7 +237,7 @@ export default function StorePage() {
           </div>
         </div>
         {!hasActiveFilters && (
-          <section className="py-12 pb-8 text-center sm:text-left hidden sm:block">
+          <section className="py-12 pb-8 text-center sm:text-left hidden sm:block" data-track-section="topo">
             <div className="flex flex-col gap-3">
               <span className="text-[12px] font-semibold tracking-widest text-gray-500 uppercase">Destaques da semana</span>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight m-0 text-black leading-tight">
@@ -214,7 +258,7 @@ export default function StorePage() {
         )}
 
         {/* C&A STYLE FILTERS (CHIPS) */}
-        <div className="flex flex-col items-center sm:items-start mt-8 mb-4">
+        <div className="flex flex-col items-center sm:items-start mt-8 mb-4" data-track-section="filtros">
           <span className="text-[13px] text-gray-500 mb-3">Deseja filtrar por categoria:</span>
           <div className="flex gap-3 overflow-x-auto pb-2 w-full sm:w-auto [&::-webkit-scrollbar]:hidden justify-start">
             <button
@@ -265,7 +309,7 @@ export default function StorePage() {
         )}
 
         {loading ? (
-          <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 mt-6">
+          <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 mt-6" data-track-section="produtos">
             {Array.from({ length: 8 }).map((_, index) => (
               <div key={index} className="flex flex-col rounded-lg bg-white border border-gray-100 overflow-hidden shadow-sm">
                 <div className="aspect-square bg-gray-100 animate-pulse" />
@@ -278,7 +322,7 @@ export default function StorePage() {
             ))}
           </section>
         ) : (
-          <section className="mt-10">
+          <section className="mt-10" data-track-section="produtos">
             <h2 className="text-[1.35rem] font-bold tracking-tight text-black pb-4 border-b border-gray-200 mb-6 flex items-center gap-2">
               {query ? 'Produtos encontrados' : activeCategory ? activeCategory.name : 'Mais recentes'}
               <span className="text-[15px] text-gray-400 font-normal">({filteredProducts.length})</span>
@@ -305,7 +349,7 @@ export default function StorePage() {
           </section>
         )}
 
-        <footer className="mt-16 py-10 border-t border-gray-200 text-center flex flex-col items-center gap-4">
+        <footer className="mt-16 py-10 border-t border-gray-200 text-center flex flex-col items-center gap-4" data-track-section="rodape">
           <div className="flex items-center gap-2 text-black font-bold">
             <div className="relative w-8 h-8 rounded-full overflow-hidden bg-black text-white flex items-center justify-center">
               <img 

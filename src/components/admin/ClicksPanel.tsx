@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Download, Eye, Users, MousePointerClick, TrendingUp, Monitor, Smartphone, Globe, Search, Clock, AlertCircle, ShoppingBag, BarChart3, Target, Calendar } from 'lucide-react';
 import type { FunnelAnalytics, AnalyticsEvent } from '../../types';
 import { fetchFunnelAnalytics, fetchAnalyticsEvents } from '../../services/catalog';
+import { EngagementPanel } from './EngagementPanel';
 
 interface Props {
   notify: (message: string) => void;
@@ -231,6 +232,9 @@ export function ClicksPanel({ notify }: Props) {
           </div>
         </div>
       </div>
+
+      {/* MAPA DE ATENÇÃO (onde desistem / onde passam tempo) */}
+      <EngagementPanel days={days} events={events} />
 
       {/* GRÁFICOS ROW 1 (BARRAS) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 24 }}>

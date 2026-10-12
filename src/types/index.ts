@@ -61,3 +61,30 @@ export interface AnalyticsEvent {
   campaign?: string | null;
   query?: string | null;
 }
+
+/** Seções rastreadas na vitrine para o mapa de atenção. */
+export type EngagementSection = 'carregando' | 'topo' | 'filtros' | 'produtos' | 'rodape' | 'produto_aberto';
+
+/** Uma abertura da vitrine (linha de page_sessions). */
+export interface EngagementSession {
+  id: string;
+  visitor_id: string | null;
+  source: string | null;
+  device: string | null;
+  browser: string | null;
+  viewport_h: number | null;
+  duration_ms: number;
+  max_scroll_pct: number;
+  catalog_load_ms: number | null;
+  products_total: number;
+  products_seen: number;
+  max_product_index: number;
+  product_opens: number;
+  buy_clicks: number;
+  searches: number;
+  filters: number;
+  exit_section: string | null;
+  section_ms: Record<string, number>;
+  product_dwell: Record<string, number>;
+  created_at: string;
+}

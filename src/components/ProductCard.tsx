@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react';
 import { ExternalLink, ShoppingBag } from 'lucide-react';
 import type { Product } from '../types';
 import { HIGHLIGHT_LABEL, STORE_LABEL, splitPrice } from '../lib/utils';
+import { observeProductCard } from '../lib/engagement';
 import { StoreBadge } from './StoreBadge';
 
 interface Props {
@@ -18,8 +20,18 @@ const HL_COLORS = {
 } as const;
 
 export function ProductCard({ product, index, onOpen, onBuy }: Props) {
+  const cardRef = useRef<HTMLElement>(null);
+
+  // Mapa de atenção: mede quanto tempo este card ficou visível
+  useEffect(() => {
+    if (!cardRef.current) return;
+    return observeProductCard(cardRef.current, product.code, index);
+  }, [product.code, index]);
+
   return (
     <article 
+      ref={cardRef}
+      data-product-code={product.code}
       className="relative flex flex-col rounded-lg bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow animate-[rise_0.35s_ease-out_both]" 
       style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
     >
